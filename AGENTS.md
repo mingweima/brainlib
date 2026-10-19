@@ -24,6 +24,8 @@ brainlib 只需要电脑上有 **Python 3.9 或更新版本**。不用 pip，不
 
 **检查 Python：** macOS 和 Linux 运行 `python3 --version`；Windows 运行 `py -3 --version`，不行再试 `python --version`。
 
+**版本低于 3.9 时**，在旁边再装一个新的（Debian/Ubuntu 运行 `sudo apt install python3.9`，有更新的版本就装更新的；有 Homebrew 就运行 `brew install python`；Windows 用下面表格里的 winget 命令），然后用它来运行，比如 `python3.9 brainlib.py next`。之后 brainlib 输出的 `RUN:` 行会自动用这个 Python。
+
 **没有 Python 时**，先用一句话告诉用户为什么要装（“brainlib 需要一个叫 Python 的免费基础软件”），
 征得同意后，按系统安装：
 

@@ -6,10 +6,12 @@ Every error prints two lines, `ERROR:` and `FIX:`, and exits with a documented c
 
 import argparse
 import builtins
+import functools
 import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -69,14 +71,43 @@ def brainlib_cmd():
         return "brainlib"
     launcher = PACKAGE_DIR.parent / "brainlib.py"
     if launcher.is_file():
-        if os.name == "nt":
-            py = "py -3" if shutil.which("py") else "python"
-        else:
-            py = "python3"
-        return '%s "%s"' % (py, launcher)
+        return '%s "%s"' % (_python(), launcher)
     if shutil.which("brainlib"):
         return "brainlib"
-    return "%s -m brainlib" % ("python" if os.name == "nt" else "python3")
+    return "%s -m brainlib" % _python()
+
+
+@functools.lru_cache(maxsize=None)
+def _python():
+    """How a fresh terminal starts a Python that can run brainlib: the usual short name when it is this
+    Python or also new enough, otherwise the full path of the Python running now."""
+    for name in ("py -3", "python") if os.name == "nt" else ("python3",):
+        exe = shutil.which(name.split()[0])
+        if exe and (_same_file(exe, sys.executable) or _new_enough(name)):
+            return name
+    if not sys.executable:
+        return "python" if os.name == "nt" else "python3"
+    return '"%s"' % sys.executable if " " in sys.executable else sys.executable
+
+
+def _same_file(a, b):
+    try:
+        return os.path.samefile(a, b)
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def _new_enough(name):
+    try:
+        return subprocess.run(
+            name.split() + ["-c", "import sys; sys.exit(sys.version_info < (3, 9))"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        ).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def rewrite(text):

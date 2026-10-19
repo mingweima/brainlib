@@ -24,6 +24,8 @@ brainlib only requires **Python 3.9 or newer** on the computer. No pip, no virtu
 
 **Check Python:** On macOS and Linux, run `python3 --version`; on Windows, run `py -3 --version`, and if that fails, try `python --version`.
 
+**If the version is older than 3.9**, install a newer Python next to it (on Debian/Ubuntu, `sudo apt install python3.9`, or a newer version if one is offered; with Homebrew, `brew install python`; on Windows, the winget command below), then run brainlib with it, for example `python3.9 brainlib.py next`. From then on, the `RUN:` lines brainlib prints name that Python.
+
 **If Python is not installed**, first tell the user in one sentence why it is needed ("brainlib needs a free basic piece of software called Python").
 After getting their permission, install it for their operating system:
 

@@ -540,6 +540,28 @@ class CliTests(Base):
         code, out = self.cli("lang", "klingon")
         self.assertEqual(code, 2)
 
+    @unittest.skipIf(os.name == "nt", "uses a shell script as a stand-in python3")
+    def test_run_lines_name_a_python_that_can_run_brainlib(self):
+        from brainlib import cli
+
+        bindir = self.tmp / "bin"
+        bindir.mkdir()
+        fake = bindir / "python3"
+        fake.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        fake.chmod(0o755)
+        saved = os.environ["PATH"]
+        try:
+            os.environ["PATH"] = str(bindir)
+            cli._python.cache_clear()
+            self.assertIn(cli._python(), (sys.executable, '"%s"' % sys.executable))
+            fake.unlink()
+            fake.symlink_to(sys.executable)
+            cli._python.cache_clear()
+            self.assertEqual(cli._python(), "python3")
+        finally:
+            os.environ["PATH"] = saved
+            cli._python.cache_clear()
+
     def test_forgiving_forms_small_models_use(self):
         lib = ["--library", str(self.root)]
         self.write("a.md", "# A\n")
