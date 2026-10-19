@@ -157,6 +157,32 @@ class PrivacyTests(Base):
         self.assertIsNone(privacy.find_secret("api key: <your-key>"))
         self.assertIsNone(privacy.find_secret("call me at " + "138" + "0000" + "1111"))
 
+    def test_secrets_in_notes_are_hidden_from_agents_and_from_backups(self):
+        self.write("keys.md", "# Keys\n\n- weather api token: %s\n- learn to swim\n" % FAKE_TOKEN)
+        lib = self.lib({})
+        code, out = self.cli("read", "keys.md", "--library", str(self.root))
+        self.assertEqual(code, 0, out)
+        self.assertNotIn(FAKE_TOKEN, out)
+        self.assertIn("[hidden by brainlib: github-token]", out)
+        self.assertIn("brainlib hid 1", out)
+        code, out = self.cli("index", "--library", str(self.root))
+        self.assertNotIn(FAKE_TOKEN, out)
+        self.assertNotIn(FAKE_TOKEN, lib.out("index.json").read_text(encoding="utf-8"))
+        self.assertNotIn(FAKE_TOKEN, lib.out("llms.txt").read_text(encoding="utf-8"))
+        with self.assertRaises(BrainError):
+            proposals.create(lib, "replace", "keys.md", "# Keys\n\n- token: [hidden by brainlib: github-token]\n", "tidy")
+        first = proposals.create(lib, "append", "keys.md", "- buy goggles", "user said so")
+        self.assertFalse(proposals.apply(lib, first["id"], approved_by="human:me")["secret_removed"])
+        clean = "# Keys\n\n- weather api token: in my password manager\n- learn to swim\n- buy goggles\n"
+        fix = proposals.create(lib, "replace", "keys.md", clean, "move the token out")
+        self.assertTrue(proposals.apply(lib, fix["id"], approved_by="human:me")["secret_removed"])
+        for f in lib.state("backups").glob("*.bak"):
+            self.assertNotIn(FAKE_TOKEN.encode("utf-8"), f.read_bytes(), f.name)
+        code, out = self.cli("undo", fix["id"], "--as", "human:me", "--library", str(self.root))
+        self.assertEqual(code, 0, out)
+        self.assertIn("stay hidden", out)
+        self.assertNotIn(FAKE_TOKEN, (self.root / "keys.md").read_text(encoding="utf-8"))
+
     def test_masked_excerpts_never_show_the_value(self):
         hits = privacy.scan_text("x " + FAKE_TOKEN)
         self.assertTrue(hits)
@@ -478,7 +504,9 @@ class ConnectTests(Base):
         nextstep.mark_done(lib, "permissions")
         nextstep.mark_done(lib, "connect")
         nextstep.mark_reviewed(lib)
-        inbox.add(lib, "likes window seats", "said", target="me.md")
+        code, out = self.cli("note", "likes window seats", "--said", "--target", "me.md", "--library", str(self.root))
+        self.assertEqual(code, 0, out)
+        self.assertIn("right away", out)
         code, out = self.cli("classify", "--library", str(self.root))
         self.assertEqual(code, 0, out)
         self.assertIn("next review", out)
@@ -488,6 +516,11 @@ class ConnectTests(Base):
         self.assertEqual(s["key"], "all-clear")
         self.assertIn("1 suggested change(s) wait", s["next"])
         self.assertIn("--target journal/%s.md" % today().isoformat(), s["extra"])
+        self.assertIn("sensitive (onboarding Q6): Health.", s["extra"])
+        self.assertIn("propose only to fix or remove", s["extra"])
+        code, out = self.cli("note", "I am allergic to peanuts", "--said", "--private", "--library", str(self.root))
+        self.assertEqual(code, 3, out)
+        self.assertIn("NOT saved", out)
 
 
 class AgentCheckTests(Base):

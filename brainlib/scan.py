@@ -194,9 +194,9 @@ def build_entry(lib, rel, text, mtime):
     md_links, wiki_links = _extract_links(body)
     return {
         "path": rel,
-        "title": str(title),
+        "title": privacy.redact(str(title)),
         "type": str(note_type),
-        "description": str(description) if description else None,
+        "description": privacy.redact(str(description)) if description else None,
         "read_when": _as_list(fm.get("read_when")),
         "tags": _as_list(fm.get("tags")),
         "tier": tier,

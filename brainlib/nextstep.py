@@ -134,7 +134,9 @@ def compute(lib, lang="zh"):
             "The library must be readable and writable for you, while vault/ and private/ stay out of your reach.",
             run=["brainlib doctor", "When everything the user agreed to is done: brainlib next --done permissions"],
             say=i18n.t("permissions", lang),
-            extra="Go through the TODO lines from `brainlib doctor` one by one. Do only what the user agrees to." + guide,
+            extra="Go through the TODO lines from `brainlib doctor` one by one. Do only what the user agrees to. "
+            "If your tool will not let you change a permission file, do not get around it with another command; "
+            "show the user the lines and ask them to add them." + guide,
         )
 
     # 1. Onboarding comes first: it decides permissions.
@@ -294,15 +296,32 @@ def compute(lib, lang="zh"):
             "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
             "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
             "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said\n"
+            "If the user says which note it belongs in, add --target <that note's path>.\n"
             "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
             + (
                 "If it is something that happened or is planned (a trip, an event, how the day went), add --target %s%s.md.\n"
                 % (journal.rstrip("/") + "/", today().isoformat())
                 if journal else ""
             )
+            + _sensitive_line(settings)
             + "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
+            "What the user tells you always goes through brainlib note; use brainlib propose only to fix or remove "
+            "something already in a note.\n"
             "Never edit note files directly, never open the vault, never store passwords."
         ),
+    )
+
+
+def _sensitive_line(settings):
+    chosen = [t for t in settings.get("sensitive_topics") or [] if t not in ("none", "other")]
+    if not chosen or settings.get("private_handling") == "normal":
+        return ""
+    q = next(q for q in onboard.load_questions()["questions"] if q["key"] == "sensitive_topics")
+    names = [o["en"] for o in q["options"] if o.get("value") in chosen]
+    return (
+        "The user marked these topics as sensitive (onboarding Q6): %s. Anything about them goes only through "
+        "brainlib note ... --private, never through propose; brainlib then handles it the way the user chose (Q7).\n"
+        % "; ".join(names)
     )
 
 

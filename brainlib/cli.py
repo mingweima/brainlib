@@ -498,11 +498,19 @@ def cmd_read(args):
         )
     if len(text.encode("utf-8")) > MAX_READ_BYTES:
         text = text[:MAX_READ_BYTES] + "\n\n[... truncated: the note is longer than %d bytes]" % MAX_READ_BYTES
-    # Note content is printed untouched (no command rewriting).
+    shown = privacy.redact(text)
+    hidden = shown.count(privacy.HIDDEN_PREFIX) - text.count(privacy.HIDDEN_PREFIX)
+    # Note content is printed untouched (no command rewriting), apart from hidden secrets.
     if args.json:
-        builtins.print(json.dumps({"path": rel, "text": text}, ensure_ascii=False))
-    else:
-        builtins.print(text)
+        builtins.print(json.dumps({"path": rel, "text": shown, "hidden_secrets": hidden}, ensure_ascii=False))
+        return EXIT_OK
+    builtins.print(shown)
+    if hidden:
+        builtins.print(
+            "\n[brainlib hid %d password(s), key(s) or card/ID number(s) in this note. Never ask the user for them. "
+            "Suggest moving them to a password manager and keeping only where to find them; to change this note, "
+            "leave each hidden line out or ask the user to edit it themselves.]" % hidden
+        )
     return EXIT_OK
 
 
@@ -584,6 +592,8 @@ def cmd_note(args):
             "\n%s is not saved as UTF-8 text, so brainlib will not add to it and will file this elsewhere. "
             "Tell the user they can open that note and save it again with UTF-8 encoding." % target
         )
+    elif target:
+        msg += "\nIf the user wants it in %s right away: run brainlib classify, then go through brainlib review with them." % target
     _emit(args, {"saved": item["id"], "provenance": item["provenance"]}, msg)
     return EXIT_OK
 
@@ -736,12 +746,16 @@ def cmd_apply(args):
     if not args.id:
         raise BrainError("Which proposal?", fix="Pass its id, for example `brainlib apply P-20260101T120000-abc123 --as %s`." % lib.owner)
     r = proposals.apply(lib, args.id, approved_by=getattr(args, "as_", None), user_words=args.user_said)
-    _emit(
-        args,
-        r,
+    msg = (
         "APPLIED %s to %s. A receipt was written (no content in it).\n"
-        "If the user wants it back: brainlib undo %s --as %s" % (args.id, r["target"], args.id, lib.owner),
+        "If the user wants it back: brainlib undo %s --as %s" % (args.id, r["target"], args.id, lib.owner)
     )
+    if r.get("secret_removed"):
+        msg += (
+            "\nThe password or key is out of the note now, and brainlib keeps no copy of it: the backup for undo has it "
+            "hidden. Make sure the user has saved it somewhere safe, such as a password manager."
+        )
+    _emit(args, r, msg)
     return EXIT_OK
 
 
@@ -763,6 +777,9 @@ def cmd_undo(args):
     lib = _lib(args)
     p = proposals.undo(lib, args.id, getattr(args, "as_", None))
     print("UNDONE %s: %s is back to how it was." % (p["id"], p["target"]))
+    backup = lib.state("backups", p["backup"]) if p.get("backup") else None
+    if backup and backup.is_file() and privacy.HIDDEN_PREFIX.encode("utf-8") in backup.read_bytes():
+        print("Passwords and keys that were removed from it stay hidden, because brainlib never keeps a copy of them.")
     return EXIT_OK
 
 

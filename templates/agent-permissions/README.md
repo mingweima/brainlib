@@ -20,5 +20,7 @@ the AI tool itself means a confused agent still cannot reach what it should not.
 | 其他 Others | 照上面三条目标，在工具的权限或沙盒设置里配置；做不到的部分，由 brainlib 自身的检查和 AGENTS.md 的规则兜底。Configure the three goals in the tool's permission or sandbox settings; whatever it cannot express is still covered by brainlib's own checks and the AGENTS.md rules. |
 
 各工具的设置格式会随版本变化，改之前请对照该工具当前的文档。改设置前先问用户。
+工具不让你改它的权限文件时，不要换一条命令绕过去，把要加的几行给用户看，请用户自己加。
 
 Tool settings formats change between versions; check the tool's current documentation, and ask the user before changing anything.
+If the tool will not let you change its permission files, do not get around it with another command; show the user the lines and ask them to add them.

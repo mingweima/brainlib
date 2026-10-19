@@ -152,6 +152,14 @@ def create(lib, op, target, content, reason, actor="agent/unknown", evidence=Non
     if not (reason or "").strip():
         raise BrainError("Every proposal needs a reason.", fix='Add --reason "why this change helps the user".')
     privacy.refuse_if_secret(content, "proposal content")
+    if privacy.HIDDEN_PREFIX in content:
+        raise BrainError(
+            "The text still has brainlib's %s...] mark where a password or key was hidden from you. "
+            "Writing it would replace the user's real value with the mark." % privacy.HIDDEN_PREFIX,
+            fix="Leave that line out of your text (suggest the user moves the secret to a password manager), "
+            "or ask the user to make this edit themselves.",
+            code=EXIT_PRIVACY,
+        )
     info = target_info(lib, target)
     evidence = list(evidence or [])
     provs = sorted({e.get("provenance") for e in evidence if e.get("provenance")})
@@ -302,9 +310,12 @@ def apply(lib, pid, approved_by=None, user_words=None):
         if before is not None and b"\r\n" in before:
             new = new.replace("\r\n", "\n").replace("\n", "\r\n")
         backup = None
+        removes_secret = before is not None and _removes_secret(before, new)
         if before is not None:
             backup = lib.state("backups", "%s.bak" % p["id"])
-            atomic_write(backup, before, private=True)
+            if removes_secret:
+                _scrub_backups(lib, p["target"])
+            atomic_write(backup, _redacted_bytes(before) if removes_secret else before, private=True)
         atomic_write(full, new)
         after_sha = sha256_file(full)
         receipt = {
@@ -318,6 +329,7 @@ def apply(lib, pid, approved_by=None, user_words=None):
             "approval": approval,
             "approved_by": approved_by or "auto",
             "user_words_given": bool((user_words or "").strip()),
+            "secret_removed": removes_secret,
             "at": now_iso(),
             "contains_content": False,
         }
@@ -336,6 +348,31 @@ def apply(lib, pid, approved_by=None, user_words=None):
     _mark_items(lib, p, "applied")
     scan_library(lib, write=True)
     return receipt
+
+
+def _removes_secret(before, new):
+    """True when the note had a password, key or card/ID number and the new text has none."""
+    old = before.decode("utf-8", "replace")
+    return privacy.redact(old) != old and privacy.redact(new) == new
+
+
+def _redacted_bytes(raw):
+    return privacy.redact(raw.decode("utf-8", "replace")).encode("utf-8")
+
+
+def _scrub_backups(lib, target):
+    """Hide secrets in older backups of a note, so no copy survives of what the user just removed."""
+    for old in list_proposals(lib, states=None):
+        if old.get("target") != target or not old.get("backup"):
+            continue
+        path = lib.state("backups", old["backup"])
+        try:
+            raw = path.read_bytes()
+        except OSError:
+            continue
+        clean = _redacted_bytes(raw)
+        if clean != raw:
+            atomic_write(path, clean, private=True)
 
 
 def _stale(lib, p, why):

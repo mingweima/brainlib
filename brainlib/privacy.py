@@ -122,9 +122,8 @@ def scan_text(text, kinds=("secret", "personal"), words=None, allowed_phrases=No
                 if _valid_cn_id(m.group(1)):
                     hits.append(Hit("cn-resident-id", "personal", lineno, mask(m.group(1))))
             for m in _CARD.finditer(line):
-                digits = re.sub(r"\D", "", m.group(0))
-                if 13 <= len(digits) <= 19 and digits[0] in "3456" and _luhn(digits):
-                    hits.append(Hit("payment-card", "personal", lineno, mask(digits)))
+                if _is_card(m.group(0)):
+                    hits.append(Hit("payment-card", "personal", lineno, mask(re.sub(r"\D", "", m.group(0)))))
         if lowered_words:
             low = line.lower()
             for phrase in lowered_allowed:
@@ -137,6 +136,29 @@ def scan_text(text, kinds=("secret", "personal"), words=None, allowed_phrases=No
 
 # Personal numbers that are refused like secrets: they enable fraud if leaked.
 REFUSED_PERSONAL = ("payment-card", "cn-resident-id")
+
+HIDDEN = "[hidden by brainlib: %s]"
+HIDDEN_PREFIX = HIDDEN.split("%")[0]
+
+
+def redact(text):
+    """Hide secrets, payment cards and ID numbers in text that is about to be shown to an agent."""
+    if not text:
+        return text
+    return "".join(ln if ALLOW_MARKER in ln else _redact_line(ln) for ln in text.splitlines(keepends=True))
+
+
+def _redact_line(line):
+    for rule, kind, rx in _COMPILED:
+        if kind == "secret":
+            line = rx.sub(lambda m, r=rule: m.group(0) if _PLACEHOLDER.search(m.group(0)) else HIDDEN % r, line)
+    line = _ID18.sub(lambda m: HIDDEN % "cn-resident-id" if _valid_cn_id(m.group(1)) else m.group(0), line)
+    return _CARD.sub(lambda m: HIDDEN % "payment-card" if _is_card(m.group(0)) else m.group(0), line)
+
+
+def _is_card(value):
+    digits = re.sub(r"\D", "", value)
+    return 13 <= len(digits) <= 19 and digits[0] in "3456" and _luhn(digits)
 
 
 def find_secret(text):

@@ -182,6 +182,8 @@ def render_status(lib, cmd, lang):
     lines = [
         "NEXT: Ask the user which AI tools they use. For each tool they name, run its line below; it shows the text and what to do next.",
         "WHY: A new conversation does not know the brain library exists unless the tool's user-level instructions say so.",
+        "AIs used in a web page or a phone app (ChatGPT, Doubao or Kimi there, for example) cannot run commands, so they "
+        "cannot use the library. Do not add the text to them; tell the user so in one sentence.",
         "FOUND ON THIS COMPUTER: %s" % (", ".join(found) or "none that brainlib knows, so ask the user"),
         "ALREADY CONNECTED: %s" % (", ".join(done) or "none"),
     ]

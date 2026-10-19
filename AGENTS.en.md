@@ -81,7 +81,7 @@ Once the tools are connected, every new conversation in them starts by running `
 ## When Errors Happen
 
 Every error prints two lines: `ERROR:` (what went wrong) and `FIX:` (what to do). Follow the instructions in `FIX:`. Exit codes:
-0 for success, 1 for issues found, 2 for invalid usage, 3 for privacy block, 4 for user approval required, and 5 for conflict (the note has changed).
+0 for success, 1 for issues found (such as the tidy-up list from `health`; that is not an error, so follow what the output says), 2 for invalid usage, 3 for privacy block, 4 for user approval required, and 5 for conflict (the note has changed).
 If you try two different ways to fix the same error and neither works, stop and show the `ERROR:` line to the user.
 
 ## More Information
