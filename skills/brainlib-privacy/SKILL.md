@@ -1,0 +1,53 @@
+---
+name: brainlib-privacy
+description: 隐私分级、加密保险箱、密码拦截、私有词表和分享前的检查。处理敏感内容、设置保险箱、发现库里有密码，或者要把库或代码仓库分享出去时使用。
+---
+
+# 隐私和保险箱
+
+## 四级敏感度
+
+| 级别 | 含义 | 谁能看 |
+|---|---|---|
+| public | 可以公开 | 任何人 |
+| internal（默认） | 普通笔记 | 这台电脑上的 AI 助手 |
+| private | 私密 | 只有用户本人；AI 助手看不到，存成加密文件 |
+| secret | 密码、密钥 | 永远不存，只记“在哪里能找到” |
+
+标记方法：在笔记开头写 `sensitivity: private`，或者把笔记放进 `private/` 文件夹。
+
+## brainlib 硬性保证的事
+
+- `brainlib read`、`find`、`index` 和 MCP 工具永远不返回 private 笔记，连标题都不显示。
+- 记录和提案里出现像密码、密钥的内容，一律拒绝（退出码 3）。
+- 保险箱解密要口令，只有用户本人在自己的终端里能输入；没有终端的程序（包括你）打不开。
+- 收据和报告里只有哈希和数量，没有内容。
+
+## 靠你自觉的事（brainlib 管不到）
+
+- 你的文件工具也许能直接打开 `private/` 里还没加密的文件。不要打开。
+- 用户没有明确要求，不把库里的内容发到网上或别的服务。
+- 按 `skills/brainlib-setup/SKILL.md` 把你自己工具的权限设好，让工具层面也挡住 `vault/` 和 `private/`。
+
+## 保险箱
+
+1. 需要 age。`brainlib doctor` 会给出这台电脑的安装命令。
+2. 请用户自己在终端运行 `brainlib vault init`，设一个口令。告诉用户：口令自己记好，忘了谁都打不开；不要告诉任何 AI。
+3. 加密私密笔记：`brainlib vault add --all-private`。原文件还在；用户想删掉原文件，请他自己运行 `brainlib vault add --all-private --remove-plaintext`。
+4. 查看：`brainlib vault list`、`brainlib vault status`。打开只能用户自己来：`brainlib vault open <名字>`。
+
+保险箱里的文件名看得见，私密文件请起一个普通的名字。
+
+## 发现库里有密码
+
+`brainlib next` 会提示在哪一篇、第几行。告诉用户，建议他挪进密码管理器，笔记里只留一句指引。
+不要把密码复制到任何地方，也不要念出来。
+
+## 分享或公开之前
+
+适用于把库分享给别人，或者发布一个代码仓库。
+
+1. 准备私有词表：放在要分享的文件夹外面的一个文本文件，每行一个不能出现的词，比如真名、公司名、住址、内部代号、本机路径。
+2. 运行 `brainlib privacy scan --mode release --words <词表> --path <要分享的文件夹>`。零命中才分享。
+3. 署名这类故意公开的短语，写进那个文件夹里的 `.brainlib-allow`，每行“文件 短语”。只放行那个文件里的那个短语，其他地方照样拦。
+4. git 仓库可以装钩子，提交和推送前自动检查：`brainlib hooks install --path <仓库>`。

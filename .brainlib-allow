@@ -1,0 +1,24 @@
+# Phrases that are public on purpose: the developer credit, the repository address, and the name of the project's goal.
+# Format: <path glob> <exact phrase>. Only these exact phrases are skipped by the
+# private-word check, and only in the listed files. Everything else is still checked.
+.brainlib-allow Mingwei Ma
+.brainlib-allow Mingwei
+.brainlib-allow Capibara Capital
+.brainlib-allow github.com/mingweima/brainlib
+.brainlib-allow 赛博永生
+LICENSE Mingwei Ma
+LICENSE Capibara Capital
+LICENSE github.com/mingweima/brainlib
+README.md Mingwei Ma
+README.md Mingwei
+README.md Capibara Capital
+README.md github.com/mingweima/brainlib
+README.md 赛博永生
+README.en.md Mingwei Ma
+README.en.md Mingwei
+README.en.md Capibara Capital
+README.en.md github.com/mingweima/brainlib
+AGENTS.md github.com/mingweima/brainlib
+AGENTS.en.md github.com/mingweima/brainlib
+pyproject.toml Mingwei Ma
+pyproject.toml github.com/mingweima/brainlib

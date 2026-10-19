@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 /ABSOLUTE/PATH/TO/brainlib/brainlib.py:*)",
+      "Bash(brainlib:*)"
+    ],
+    "deny": [
+      "Read(./vault/**)",
+      "Read(./private/**)",
+      "Edit(./**/*.md)"
+    ]
+  }
+}

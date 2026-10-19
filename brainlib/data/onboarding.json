@@ -1,0 +1,501 @@
+{
+  "questions_version": 1,
+  "intro": {
+    "en": "Before I start, I'd like to ask you up to 10 quick multiple-choice questions, so I use your library the way you want. You can skip any question, and you can change any answer later just by telling me.",
+    "zh": "开始之前，我想问你最多 10 个简单的选择题，好按你想要的方式用你的库。任何一题都可以跳过；以后想改，直接告诉我就行。"
+  },
+  "outro": {
+    "en": "Thank you. None of this is fixed: tell me any time if you want to change an answer. I'll check the permission and privacy answers with you again in about 3 months, and the rest in about 6 months.",
+    "zh": "谢谢。这些都不是定死的，随时告诉我想改哪一条。权限和隐私相关的几题，我大约 3 个月后再跟你确认一次，其余的大约半年确认一次。"
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "key": "purposes",
+      "multi": true,
+      "revisit_days": 180,
+      "ask": {
+        "en": "What do you mainly want me to use your library for? Pick any that fit.",
+        "zh": "你主要想让我用这个库做什么？可以多选。"
+      },
+      "why": {
+        "en": "This decides which features I turn on for you.",
+        "zh": "这决定我为你打开哪些功能。"
+      },
+      "recommended": [
+        "a"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "value": "remember",
+          "en": "Remember what you tell me: preferences, decisions, facts about you",
+          "zh": "记住你告诉我的事：偏好、决定、关于你的事实"
+        },
+        {
+          "id": "b",
+          "value": "organize",
+          "en": "Organize the notes you already have",
+          "zh": "整理你已有的笔记"
+        },
+        {
+          "id": "c",
+          "value": "research",
+          "en": "Collect and connect what you read and learn",
+          "zh": "收集、串联你读到和学到的东西"
+        },
+        {
+          "id": "d",
+          "value": "work",
+          "en": "Keep track of work: projects, decisions, people you work with",
+          "zh": "管工作上的事：项目、决定、合作的人"
+        },
+        {
+          "id": "e",
+          "value": "understand",
+          "en": "Get to know you deeply over time (values, how you think), so I can act more like you would",
+          "zh": "慢慢深入了解你（价值观、思考方式），做事越来越像你会做的那样"
+        },
+        {
+          "id": "f",
+          "value": "other",
+          "en": "Something else (tell me in your own words)",
+          "zh": "其他（用你自己的话说）"
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "key": "areas",
+      "multi": true,
+      "revisit_days": 180,
+      "ask": {
+        "en": "Which parts of your life will the library cover? Pick any that fit.",
+        "zh": "这个库会涉及你生活的哪些方面？可以多选。"
+      },
+      "why": {
+        "en": "This tells me where to file things, and which areas may need extra privacy.",
+        "zh": "这让我知道东西该放哪里，以及哪些方面可能要更注意隐私。"
+      },
+      "recommended": [],
+      "options": [
+        {
+          "id": "a",
+          "value": "work",
+          "en": "Work and career",
+          "zh": "工作和事业"
+        },
+        {
+          "id": "b",
+          "value": "study",
+          "en": "Study and research",
+          "zh": "学习和研究"
+        },
+        {
+          "id": "c",
+          "value": "home",
+          "en": "Family and home life",
+          "zh": "家庭和日常生活"
+        },
+        {
+          "id": "d",
+          "value": "health",
+          "en": "Health and fitness",
+          "zh": "健康和运动"
+        },
+        {
+          "id": "e",
+          "value": "money",
+          "en": "Money and finances",
+          "zh": "钱和理财"
+        },
+        {
+          "id": "f",
+          "value": "hobbies",
+          "en": "Hobbies and interests",
+          "zh": "兴趣爱好"
+        },
+        {
+          "id": "g",
+          "value": "people",
+          "en": "Relationships and the people in your life",
+          "zh": "人际关系和身边的人"
+        },
+        {
+          "id": "h",
+          "value": "other",
+          "en": "Something else (tell me)",
+          "zh": "其他（告诉我）"
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "key": "existing_notes",
+      "multi": false,
+      "revisit_days": 0,
+      "ask": {
+        "en": "Do you already have notes somewhere?",
+        "zh": "你现在已经有笔记了吗？在哪里？"
+      },
+      "why": {
+        "en": "If you do, I can read them as they are; I won't rewrite them.",
+        "zh": "如果有，我可以原样读，不会改写它们。"
+      },
+      "recommended": [],
+      "options": [
+        {
+          "id": "a",
+          "value": "none",
+          "en": "No, let's start fresh",
+          "zh": "没有，从零开始"
+        },
+        {
+          "id": "b",
+          "value": "markdown_folder",
+          "en": "Yes, a folder of Markdown or text files (for example Obsidian or Logseq)",
+          "zh": "有，一个 Markdown 或文本文件夹（比如 Obsidian、Logseq）"
+        },
+        {
+          "id": "c",
+          "value": "other_app",
+          "en": "Yes, in another app (Notion, Apple Notes, Evernote, OneNote...) that can export",
+          "zh": "有，在别的应用里（Notion、备忘录、印象笔记、OneNote 等），可以导出"
+        },
+        {
+          "id": "d",
+          "value": "scattered",
+          "en": "Scattered across chats, emails and documents",
+          "zh": "散在聊天记录、邮件和文档里"
+        },
+        {
+          "id": "e",
+          "value": "other",
+          "en": "Something else (tell me)",
+          "zh": "其他（告诉我）"
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "key": "edit_mode",
+      "multi": false,
+      "revisit_days": 90,
+      "ask": {
+        "en": "How much may I change your notes?",
+        "zh": "我可以在多大程度上改你的笔记？"
+      },
+      "why": {
+        "en": "This is the main permission setting. Your most important pages always need your yes, whatever you pick.",
+        "zh": "这是最主要的权限设置。不管选哪项，最重要的几页改动永远要你点头。"
+      },
+      "recommended": [
+        "c"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "value": "read_only",
+          "en": "Only read them. Never change or add anything.",
+          "zh": "只读，不改也不加任何东西"
+        },
+        {
+          "id": "b",
+          "value": "inbox_only",
+          "en": "Write what you learn into a separate inbox; I'll go through it myself",
+          "zh": "把你学到的记在单独的收件箱里，我自己去看"
+        },
+        {
+          "id": "c",
+          "value": "propose",
+          "en": "Suggest changes, and change my notes only after I say yes",
+          "zh": "提出修改建议，我说可以了再改"
+        },
+        {
+          "id": "d",
+          "value": "auto_low_risk",
+          "en": "Add small, low-risk things (like journal entries) directly; ask me for everything else",
+          "zh": "小的、低风险的补充（比如日记）直接加，其余的先问我"
+        },
+        {
+          "id": "e",
+          "value": "auto_most",
+          "en": "Make most additions directly and tell me afterwards",
+          "zh": "大部分补充直接做，事后告诉我"
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "key": "record_policy",
+      "multi": false,
+      "revisit_days": 180,
+      "ask": {
+        "en": "What should I write down? Each option includes the ones above it.",
+        "zh": "我该记下哪些东西？每一项都包含它上面的几项。"
+      },
+      "why": {
+        "en": "I always label who said what: your words, my guesses, and outside sources are kept apart.",
+        "zh": "我永远会标明来源：你的原话、我的推测、外部资料分开记。"
+      },
+      "recommended": [
+        "b"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "value": "explicit_only",
+          "en": "Only what I explicitly ask you to remember",
+          "zh": "只记我明确让你记的"
+        },
+        {
+          "id": "b",
+          "value": "important",
+          "en": "Important things I say: preferences, decisions, facts",
+          "zh": "我说过的重要的事：偏好、决定、事实"
+        },
+        {
+          "id": "c",
+          "value": "with_inferences",
+          "en": "Also your own observations about me, always marked as your guess",
+          "zh": "再加上你对我的观察，永远标明是你的推测"
+        },
+        {
+          "id": "d",
+          "value": "with_external",
+          "en": "Also useful outside material (articles, web pages), always with the source",
+          "zh": "再加上有用的外部资料（文章、网页），永远注明出处"
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "key": "sensitive_topics",
+      "multi": true,
+      "revisit_days": 90,
+      "ask": {
+        "en": "Which topics are sensitive for you? Pick any that fit. (Passwords and keys are never stored, whatever you pick.)",
+        "zh": "哪些话题对你来说比较敏感？可以多选。（密码和密钥无论如何都不会存。）"
+      },
+      "why": {
+        "en": "I'll treat these as private by default.",
+        "zh": "这些我会默认按私密处理。"
+      },
+      "recommended": [],
+      "options": [
+        {
+          "id": "a",
+          "value": "health",
+          "en": "Health",
+          "zh": "健康"
+        },
+        {
+          "id": "b",
+          "value": "money",
+          "en": "Money and accounts",
+          "zh": "钱和账户"
+        },
+        {
+          "id": "c",
+          "value": "others_private",
+          "en": "Family matters and other people's private lives",
+          "zh": "家事和别人的隐私"
+        },
+        {
+          "id": "d",
+          "value": "work_confidential",
+          "en": "Confidential work matters",
+          "zh": "工作上的机密"
+        },
+        {
+          "id": "e",
+          "value": "location_routine",
+          "en": "Where you live and your daily routine",
+          "zh": "住址和日常作息"
+        },
+        {
+          "id": "f",
+          "value": "none",
+          "en": "Nothing in particular",
+          "zh": "没有特别敏感的"
+        },
+        {
+          "id": "g",
+          "value": "other",
+          "en": "Something else (tell me)",
+          "zh": "其他（告诉我）"
+        }
+      ]
+    },
+    {
+      "id": "Q7",
+      "key": "private_handling",
+      "multi": false,
+      "revisit_days": 90,
+      "ask": {
+        "en": "How should I handle sensitive things?",
+        "zh": "敏感的内容该怎么处理？"
+      },
+      "why": {
+        "en": "Keeping them out is the simplest and safest. The vault is for people who want me to keep sensitive things too: it needs a small encryption tool installed, and you set a passphrase yourself in a terminal. I can put things in but can never read them.",
+        "zh": "完全不进库最简单，也最安全。保险箱适合想让我把敏感的事也记下来的人，需要另装一个加密小工具，再由你自己在终端里设一个口令；我能往里放，但永远读不了。"
+      },
+      "recommended": [
+        "a"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "value": "exclude",
+          "en": "Keep them out of the library completely",
+          "zh": "完全不进库"
+        },
+        {
+          "id": "b",
+          "value": "vault",
+          "en": "Keep them in an encrypted vault that only I can open",
+          "zh": "放进加密保险箱，只有我能打开"
+        },
+        {
+          "id": "c",
+          "value": "ask_first",
+          "en": "Store them, but ask me before reading or using them",
+          "zh": "可以存，但读或用之前先问我"
+        },
+        {
+          "id": "d",
+          "value": "normal",
+          "en": "No special handling",
+          "zh": "不用特别处理"
+        }
+      ]
+    },
+    {
+      "id": "Q8",
+      "key": "review_cadence",
+      "multi": false,
+      "revisit_days": 60,
+      "ask": {
+        "en": "How often are you happy to spend a few minutes reviewing my suggestions?",
+        "zh": "你愿意多久花几分钟看一下我的整理建议？"
+      },
+      "why": {
+        "en": "I'll batch my suggestions to match, so I don't interrupt you too often.",
+        "zh": "我会按这个节奏攒着建议一起给你，不频繁打扰。"
+      },
+      "recommended": [
+        "b"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "value": "daily",
+          "en": "Every day",
+          "zh": "每天"
+        },
+        {
+          "id": "b",
+          "value": "weekly",
+          "en": "Once a week",
+          "zh": "每周一次"
+        },
+        {
+          "id": "c",
+          "value": "monthly",
+          "en": "Once a month",
+          "zh": "每月一次"
+        },
+        {
+          "id": "d",
+          "value": "on_request",
+          "en": "Only when I ask",
+          "zh": "只在我主动要的时候"
+        }
+      ]
+    },
+    {
+      "id": "Q9",
+      "key": "question_style",
+      "multi": false,
+      "revisit_days": 120,
+      "ask": {
+        "en": "When I need your input, how should I ask?",
+        "zh": "需要你拿主意的时候，我该怎么问？"
+      },
+      "why": {
+        "en": "Some people like few questions, others like to be asked. Either is fine.",
+        "zh": "有人喜欢少被问，有人喜欢多问几句，都可以。"
+      },
+      "recommended": [
+        "b"
+      ],
+      "options": [
+        {
+          "id": "a",
+          "value": "minimal",
+          "en": "As little as possible: decide yourself and ask only about important things",
+          "zh": "尽量少问，你自己判断，重要的才问"
+        },
+        {
+          "id": "b",
+          "value": "choices",
+          "en": "Multiple choice, at most 3 questions at a time",
+          "zh": "出选择题，每次最多 3 道"
+        },
+        {
+          "id": "c",
+          "value": "whenever_unsure",
+          "en": "Ask whenever you're unsure",
+          "zh": "有不确定就问"
+        },
+        {
+          "id": "d",
+          "value": "guess_first",
+          "en": "Tell me your guess first, then I confirm or correct it",
+          "zh": "先说你的猜测，我来确认或纠正"
+        }
+      ]
+    },
+    {
+      "id": "Q10",
+      "key": "audience",
+      "multi": false,
+      "revisit_days": 180,
+      "ask": {
+        "en": "Who will use this library?",
+        "zh": "谁会用这个库？"
+      },
+      "why": {
+        "en": "With several agents or people, I can give each one only the parts they need.",
+        "zh": "如果有好几个助手或好几个人用，我可以只给每个人看他需要的部分。"
+      },
+      "recommended": [],
+      "options": [
+        {
+          "id": "a",
+          "value": "solo_one_agent",
+          "en": "Just me, with one AI assistant",
+          "zh": "只有我，加一个 AI 助手"
+        },
+        {
+          "id": "b",
+          "value": "solo_many_agents",
+          "en": "Just me, but with several AI tools or agents",
+          "zh": "只有我，但会用好几个 AI 工具或助手"
+        },
+        {
+          "id": "c",
+          "value": "shared",
+          "en": "Family members or teammates will read parts of it",
+          "zh": "家人或同事也会看其中一部分"
+        },
+        {
+          "id": "d",
+          "value": "unsure",
+          "en": "Not sure yet",
+          "zh": "还不确定"
+        }
+      ]
+    }
+  ]
+}

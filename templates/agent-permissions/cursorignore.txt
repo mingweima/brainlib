@@ -1,0 +1,3 @@
+# brainlib: keep the encrypted vault and private notes away from AI features
+vault/
+private/

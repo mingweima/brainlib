@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brainlib"
+version = "0.1.0"
+description = "A personal knowledge library that any AI agent can use safely: plain Markdown, approvals, provenance and an encrypted vault."
+readme = "README.en.md"
+requires-python = ">=3.9"
+license = { text = "PolyForm-Noncommercial-1.0.0" }
+authors = [{ name = "Mingwei Ma" }]
+dependencies = []
+classifiers = [
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/mingweima/brainlib"
+
+[project.scripts]
+brainlib = "brainlib.cli:main"
+
+[tool.setuptools]
+packages = ["brainlib"]
+
+[tool.setuptools.package-data]
+brainlib = ["data/*.json", "data/templates/library/*.md"]

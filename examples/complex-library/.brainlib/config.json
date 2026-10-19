@@ -1,0 +1,12 @@
+{
+  "brainlib_config": 1,
+  "owner": "human:avery",
+  "library_name": "avery-demo",
+  "zones": [
+    {"path": "core/", "tier": "L0", "note": "values and how to work with me"},
+    {"path": "journal/", "stream": true, "auto_apply": true},
+    {"path": "private/", "sensitivity": "private"},
+    {"path": "_archive/", "authority": "archived", "tier": "L3"}
+  ],
+  "fallback_note": "inbox-unsorted.md"
+}
