@@ -124,7 +124,10 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False):
     notes = [
         n
         for n in index["notes"]
-        if n["authority"] == "canonical" and not n.get("stream") and privacy.is_readable_by_agents(n["sensitivity"])
+        if n["authority"] == "canonical"
+        and not n.get("stream")
+        and not n.get("not_utf8")
+        and privacy.is_readable_by_agents(n["sensitivity"])
     ]
     candidates = [(n, _fields(n)) for n in notes]
     fallback = lib.config.get("fallback_note") or "inbox-unsorted.md"
@@ -141,7 +144,7 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False):
     writable = {
         n["path"]
         for n in index["notes"]
-        if n["authority"] != "archived" and privacy.is_readable_by_agents(n["sensitivity"])
+        if n["authority"] != "archived" and not n.get("not_utf8") and privacy.is_readable_by_agents(n["sensitivity"])
     }
     groups = {}
     for it in items:

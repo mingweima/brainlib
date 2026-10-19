@@ -108,7 +108,13 @@ def target_info(lib, target):
     zone = lib.zone_for(rel)
     exists = full.is_file()
     if exists:
-        text = full.read_text(encoding="utf-8", errors="replace")
+        try:
+            text = full.read_bytes().decode("utf-8")
+        except UnicodeDecodeError:
+            raise BrainError(
+                "%s is not saved as UTF-8 text, so changing it could garble what is already in it." % rel,
+                fix="Ask the user to open the note and save it again with UTF-8 encoding, or put this in another note.",
+            ) from None
         entry = build_entry(lib, rel, text, full.stat().st_mtime)
         tier, sensitivity, stream = entry["tier"], entry["sensitivity"], entry["stream"]
     else:

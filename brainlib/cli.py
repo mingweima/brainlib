@@ -573,14 +573,29 @@ def cmd_note(args):
         _emit(args, {"duplicate_of": dup}, "ALREADY SAVED as %s. Nothing new was written." % dup)
         return EXIT_OK
     shown = "(private: encrypted)" if item.get("encrypted_ref") else _short(item.get("text"), 120)
-    _emit(
-        args,
-        {"saved": item["id"], "provenance": item["provenance"]},
+    msg = (
         "SAVED to the inbox as %s [%s]: %s\n"
         "No note was changed. It becomes a suggested change when `brainlib classify` runs."
-        % (item["id"], provenance.label(item["provenance"]), shown),
+        % (item["id"], provenance.label(item["provenance"]), shown)
     )
+    target = (item.get("suggest") or {}).get("target")
+    if target and _not_utf8(lib, target):
+        msg += (
+            "\n%s is not saved as UTF-8 text, so brainlib will not add to it and will file this elsewhere. "
+            "Tell the user they can open that note and save it again with UTF-8 encoding." % target
+        )
+    _emit(args, {"saved": item["id"], "provenance": item["provenance"]}, msg)
     return EXIT_OK
+
+
+def _not_utf8(lib, rel):
+    try:
+        safe_resolve(lib.root, rel).read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        return True
+    except (OSError, BrainError):
+        pass
+    return False
 
 
 def cmd_inbox(args):

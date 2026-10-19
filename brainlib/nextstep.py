@@ -268,7 +268,7 @@ def compute(lib, lang="zh"):
     # 7. Tidy-up suggestions.
     issues = sum(
         len(reports.get(k) or [])
-        for k in ("broken_links", "stale", "conflicts", "frontmatter_errors", "invalid_values", "future_dates")
+        for k in ("broken_links", "stale", "conflicts", "frontmatter_errors", "invalid_values", "future_dates", "not_utf8")
     )
     if issues and "health" not in snoozed:
         return step(

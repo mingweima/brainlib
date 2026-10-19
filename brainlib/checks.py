@@ -18,6 +18,10 @@ EXPLAIN = {
     "conflicts": ("Two main pages in the same folder have the same title.", "Ask the user which one is current; mark the other `authority: archived`."),
     "missing_meta": ("An important page (L0/L1) has no description or read_when.", "Propose adding a one-line description and when to read it."),
     "frontmatter_errors": ("A note's header (front matter) could not be fully read.", "Fix the YAML syntax at the top of the note."),
+    "not_utf8": (
+        "A note is not saved as UTF-8 text, so it may look garbled and brainlib will not change it.",
+        "Ask the user to open it in their editor and save it again with UTF-8 encoding.",
+    ),
     "invalid_values": ("A header field has a value brainlib does not know.", "Use the values listed in spec/front-matter.md."),
     "future_dates": ("A note says it was updated in the future.", "Fix the date in the `updated` field."),
 }

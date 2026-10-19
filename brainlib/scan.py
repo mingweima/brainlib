@@ -263,11 +263,17 @@ def scan_library(lib, write=True):
     for rel in iter_notes(lib):
         full = lib.root / rel
         try:
-            text = full.read_text(encoding="utf-8", errors="replace")
+            raw = full.read_bytes()
             mtime = full.stat().st_mtime
         except OSError:
             continue
+        try:
+            text, not_utf8 = raw.decode("utf-8"), False
+        except UnicodeDecodeError:
+            text, not_utf8 = raw.decode("utf-8", "replace"), True
         e = build_entry(lib, rel, text, mtime)
+        if not_utf8:
+            e["not_utf8"] = True
         e["_secret_hits"] = [h.as_dict() for h in privacy.scan_text(text, kinds=("secret",))]
         entries.append(e)
     broken = _resolve_links(entries)
@@ -299,6 +305,7 @@ def _reports(lib, entries, broken):
         "future_dates": [
             e["path"] for e in public if e["updated"] and parse_date(e["updated"]) > t + timedelta(days=1)
         ],
+        "not_utf8": [e["path"] for e in public if e.get("not_utf8")],
         "invalid_values": [],
         "frontmatter_errors": [],
         "conflicts": [],

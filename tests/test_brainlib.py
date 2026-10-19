@@ -243,6 +243,22 @@ class ProposalTests(Base):
         proposals.undo(lib, p["id"], "human:me")
         self.assertEqual((self.root / "notes/tea.md").read_bytes(), b"# Tea\r\n\r\nGreen tea.\r\n")
 
+    def test_notes_not_saved_as_utf8_are_reported_and_left_alone(self):
+        old = self.root / "notes" / "old.md"
+        original = "# 旧笔记\n\n以前用记事本写的。\n".encode("gbk")
+        old.write_bytes(original)
+        lib = self.lib()
+        self.assertEqual(scan.scan_library(lib)["reports"]["not_utf8"], ["notes/old.md"])
+        with self.assertRaises(BrainError):
+            proposals.create(lib, "append", "notes/old.md", "- one more line", "user asked")
+        code, out = self.cli("note", "one more line for the old note", "--said", "--target", "notes/old.md", "--library", str(self.root))
+        self.assertEqual(code, 0, out)
+        self.assertIn("not saved as UTF-8", out)
+        summary = classify.run(lib)
+        self.assertNotIn("errors", summary)
+        self.assertNotIn("notes/old.md", [p["target"] for p in summary["proposals"]])
+        self.assertEqual(old.read_bytes(), original)
+
     def test_policy(self):
         lib = self.lib({"zones": [{"path": "private/", "sensitivity": "private"}]})
         p = proposals.create(lib, "append", "me.md", "- [said 2026-01-01] calm", "profile")
