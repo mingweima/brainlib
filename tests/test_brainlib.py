@@ -507,6 +507,10 @@ class ConnectTests(Base):
         code, out = self.cli("note", "likes window seats", "--said", "--target", "me.md", "--library", str(self.root))
         self.assertEqual(code, 0, out)
         self.assertIn("right away", out)
+        s = nextstep.compute(lib)
+        self.assertEqual(s["key"], "classify")
+        self.assertIn("sensitive (onboarding Q6): Health.", s["rules"])
+        self.assertIn("ALWAYS, whatever the user asks", nextstep.render(s))
         code, out = self.cli("classify", "--library", str(self.root))
         self.assertEqual(code, 0, out)
         self.assertIn("next review", out)
@@ -515,12 +519,33 @@ class ConnectTests(Base):
         s = nextstep.compute(lib)
         self.assertEqual(s["key"], "all-clear")
         self.assertIn("1 suggested change(s) wait", s["next"])
-        self.assertIn("--target journal/%s.md" % today().isoformat(), s["extra"])
-        self.assertIn("sensitive (onboarding Q6): Health.", s["extra"])
-        self.assertIn("propose only to fix or remove", s["extra"])
+        self.assertIn("--target journal/%s.md" % today().isoformat(), s["rules"])
+        self.assertIn("propose only to fix or remove", s["rules"])
         code, out = self.cli("note", "I am allergic to peanuts", "--said", "--private", "--library", str(self.root))
         self.assertEqual(code, 3, out)
         self.assertIn("NOT saved", out)
+        code, out = self.cli(
+            "propose", "append", "me.md", "--text", "- likes aisle seats [said 2026-10-20]", "--reason", "user said so",
+            "--library", str(self.root),
+        )
+        self.assertEqual(code, 2, out)
+        self.assertIn("Only brainlib note adds these labels", out)
+        self.write("people/ann.md", "# Ann\n- likes tea [said 2026-10-01]\n- typo hre\n")
+        code, out = self.cli(
+            "propose", "replace", "people/ann.md", "--text", "# Ann\n- likes tea [said 2026-10-01]\n- typo here\n",
+            "--reason", "fix a typo", "--library", str(self.root),
+        )
+        self.assertEqual(code, 0, out)
+
+    def test_daily_hint_names_the_users_own_sensitive_topics(self):
+        lib = self.lib()
+        onboard.answer(lib, "Q6", "a,g", other_text="my divorce")
+        onboard.answer(lib, "Q7", "c")
+        line = nextstep._sensitive_line(lib, onboard.settings(lib))
+        self.assertIn('Health; "my divorce".', line)
+        self.assertIn("ask the user first", line)
+        onboard.answer(lib, "Q7", "d")
+        self.assertEqual(nextstep._sensitive_line(lib, onboard.settings(lib)), "")
 
 
 class AgentCheckTests(Base):

@@ -72,7 +72,7 @@ Once the tools are connected, every new conversation in them starts by running `
    `--extracted <file>` for excerpts from files written by the user, `--inferred` for your inferences, `--guess` for your guesses, and `--external <source>` for external material.
    Never write your inferences or guesses as the user's own views.
 3. **Never touch private content.** Do not open `vault/` or notes marked as private, and never ask for or record the vault passphrase.
-   Never store passwords or secret keys; at most, record a note on where to find them.
+   Never store passwords or secret keys; at most, record a note on where to find them. Where a note shows `[hidden by brainlib: …]`, do not guess what it was and do not ask the user for it.
 4. **Never send content outside.** Unless the user explicitly asks, do not send any content from the library to the internet or to any external service.
 5. **Preferences change.** When what the user says does not match their earlier choices, run
    `brainlib onboard signal <question-id> "user's exact words"`; if the user explicitly wants to change an answer, run `brainlib onboard answer <question-id> <new-option>` directly.

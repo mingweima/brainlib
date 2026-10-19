@@ -43,7 +43,7 @@ description: 第一次在一台电脑上安装和设置 brainlib：检查 Python
 按你所在的工具，从 `templates/agent-permissions/` 选模板：
 
 - Claude Code：把 `claude-code.settings.json` 的内容合并进库文件夹的 `.claude/settings.json`。
-- Cursor：把 `cursorignore.txt` 的内容追加到库文件夹的 `.cursorignore`。
+- Cursor：把 `cursorignore.txt` 的内容追加到库文件夹的 `.cursorignore`。Cursor 常常不让 AI 改这个文件，被拦了就别换办法写（终端命令也不行），把这几行给用户看，请他自己加。
 - 其他工具：照 `templates/agent-permissions/README.md` 里的通用做法。
 
 改设置前先问用户，改完告诉用户改了哪个文件。

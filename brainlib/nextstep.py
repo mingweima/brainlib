@@ -122,6 +122,13 @@ def no_library(lang):
 
 
 def compute(lib, lang="zh"):
+    s = _compute(lib, lang)
+    if s["key"] not in ("permissions", "onboarding", "connect"):
+        s["rules"] = daily_rules(lib, onboard.settings(lib))
+    return s
+
+
+def _compute(lib, lang):
     settings = onboard.settings(lib)
     snoozed = _snoozed(lib)
 
@@ -135,8 +142,8 @@ def compute(lib, lang="zh"):
             run=["brainlib doctor", "When everything the user agreed to is done: brainlib next --done permissions"],
             say=i18n.t("permissions", lang),
             extra="Go through the TODO lines from `brainlib doctor` one by one. Do only what the user agrees to. "
-            "If your tool will not let you change a permission file, do not get around it with another command; "
-            "show the user the lines and ask them to add them." + guide,
+            "If your tool will not let you change a permission file such as .cursorignore, do not write it another way "
+            "(no shell commands either); show the user the lines and ask them to add them." + guide,
         )
 
     # 1. Onboarding comes first: it decides permissions.
@@ -282,7 +289,6 @@ def compute(lib, lang="zh"):
             snoozable=True,
         )
 
-    journal = next((z["path"] for z in lib.config.get("zones") or [] if z.get("stream") and z.get("path")), None)
     waiting = (
         " %d suggested change(s) wait for the user's next review, as often as the user chose (onboarding Q8)." % len(owner)
         if owner else ""
@@ -291,38 +297,51 @@ def compute(lib, lang="zh"):
         "all-clear",
         "Nothing needs doing now.%s Help the user with whatever they ask." % waiting,
         "The library is up to date.",
-        extra=(
-            "Once per conversation, before your first answer: run brainlib index and read every core page (L0) it lists "
-            "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
-            "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
-            "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said\n"
-            "If the user says which note it belongs in, add --target <that note's path>.\n"
-            "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
-            + (
-                "If it is something that happened or is planned (a trip, an event, how the day went), add --target %s%s.md.\n"
-                % (journal.rstrip("/") + "/", today().isoformat())
-                if journal else ""
-            )
-            + _sensitive_line(settings)
-            + "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
-            "What the user tells you always goes through brainlib note; use brainlib propose only to fix or remove "
-            "something already in a note.\n"
-            "Never edit note files directly, never open the vault, never store passwords."
-        ),
     )
 
 
-def _sensitive_line(settings):
-    chosen = [t for t in settings.get("sensitive_topics") or [] if t not in ("none", "other")]
-    if not chosen or settings.get("private_handling") == "normal":
+def daily_rules(lib, settings):
+    """How to read and record during any conversation once setup is done, whatever the step."""
+    journal = next((z["path"] for z in lib.config.get("zones") or [] if z.get("stream") and z.get("path")), None)
+    return (
+        "Once per conversation, before your first answer: run brainlib index and read every core page (L0) it lists "
+        "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
+        "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
+        "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said\n"
+        "If the user says which note it belongs in, add --target <that note's path>.\n"
+        "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
+        + (
+            "If it is something that happened or is planned (a trip, an event, how the day went), add --target %s%s.md.\n"
+            % (journal.rstrip("/") + "/", today().isoformat())
+            if journal else ""
+        )
+        + _sensitive_line(lib, settings)
+        + "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
+        "What the user tells you always goes through brainlib note; use brainlib propose only to fix or remove "
+        "something already in a note.\n"
+        "Never edit note files directly, never open the vault, never store passwords."
+    )
+
+
+def _sensitive_line(lib, settings):
+    if settings.get("private_handling") == "normal":
         return ""
     q = next(q for q in onboard.load_questions()["questions"] if q["key"] == "sensitive_topics")
+    chosen = set(settings.get("sensitive_topics") or []) - {"none", "other"}
     names = [o["en"] for o in q["options"] if o.get("value") in chosen]
-    return (
+    other = (onboard.profile(lib)["answers"].get(q["id"]) or {}).get("other_text")
+    if other:
+        names.append('"%s"' % other)
+    if not names:
+        return ""
+    line = (
         "The user marked these topics as sensitive (onboarding Q6): %s. Anything about them goes only through "
         "brainlib note ... --private, never through propose; brainlib then handles it the way the user chose (Q7).\n"
         % "; ".join(names)
     )
+    if settings.get("private_handling") == "ask_first":
+        line += "Before reading or using anything about these topics, ask the user first (onboarding Q7).\n"
+    return line
 
 
 def render(s):
@@ -333,5 +352,8 @@ def render(s):
         lines.append("SAY TO USER: %s" % s["say"])
     if s.get("extra"):
         lines.append(s["extra"])
+    if s.get("rules"):
+        lines.append("ALWAYS, whatever the user asks in this conversation:")
+        lines.extend("- " + ln for ln in s["rules"].splitlines())
     lines.append("THEN: run `brainlib next` again.")
     return "\n".join(lines)

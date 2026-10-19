@@ -137,7 +137,8 @@ def check(lib=None):
         "Limit what your own AI tool may do: allow brainlib commands, block reading vault/ and private/, and block "
         "editing notes directly. Cursor: add the lines of %s to %s. Claude Code: merge %s into %s, replacing "
         "/ABSOLUTE/PATH/TO/brainlib with %s. Other tools: set the same three limits in their permission settings "
-        "(details: %s)."
+        "(details: %s). Tools often protect these files from agents: if yours blocks the edit, do not write the file "
+        "another way (no shell commands either); show the user the lines and ask them to add them."
         % (
             PERMISSION_TEMPLATES / "cursorignore.txt",
             Path(str(folder)) / ".cursorignore",

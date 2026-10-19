@@ -1,4 +1,4 @@
-# v0.1.3 现状 / Status
+# v0.1.4 现状 / Status
 
 ## 能用的 / Works
 
@@ -11,7 +11,7 @@
 - 来源六级标记；按用户设置拦截不该记的类型。
 - 刚记下、还没整理进笔记的内容，`find` 和 `index` 马上就能查到，带着来源标记；私密的不出现。
 - 提案、审批、收据、备份和撤销；L0/L1 永远要用户同意；`--user-said` 只收用户对这条修改的回答，照抄要记的原话会被拒绝；保留 CRLF 换行。
-- 隐私方面，私密笔记不出现在任何输出里；拒存密码、密钥、银行卡号、身份证号；age 保险箱；发布扫描和放行清单；git 钩子。
+- 隐私方面，私密笔记不出现在任何输出里；拒存密码、密钥、银行卡号、身份证号，笔记里原有的这类内容拿给 AI 时遮住；age 保险箱；发布扫描和放行清单；git 钩子。
 - AI 同时发出好几条 brainlib 命令时，它们会排队执行，不会互相覆盖记录。
 - MCP 服务器（stdio）。
 - Python 3.9 及以上；零依赖。按 macOS、Windows、Linux 三个系统写的，目前只在 macOS 上实测过。
@@ -30,6 +30,27 @@
 - 技能说明目前以中文为主，英文版只有 `AGENTS.en.md` 和 `README.en.md`。
 
 ## 更新记录 / Changes
+
+### v0.1.4（2026-10-20）
+
+- 笔记里原本存着的密码、密钥、银行卡号和身份证号，`read`、索引、`llms.txt` 和 `find` 拿给 AI 时都会遮住。AI 要改这篇笔记，遮住的几行就不动，或者请用户自己改。
+  Passwords, keys, card and ID numbers already in notes are hidden whenever `read`, the index, `llms.txt` or `find` shows them to the agent. To change such a note, the agent leaves the hidden lines alone or asks the user to edit them.
+- 一次改动把密钥从笔记里删掉时，撤销用的备份里也把它遮住，这篇笔记以前的备份一并遮住。撤销以后密钥不会回来，所以先确认用户已经存进密码管理器。
+  When a change removes a secret from a note, the undo backup hides it too, and so do older backups of that note. Undo will not bring it back, so the user should save it in a password manager first.
+- 日常提示列出用户在第 6 题勾的敏感话题，连同他自己补充的，提醒这些只能用 `note --private` 记；第 7 题选了「读或用之前先问我」的，还会提醒先问。用户点名记进哪篇，就加 `--target` 指向那篇。用户说的话一律用 `note` 记，`propose` 只用来改或删已有的内容，来源标记就不会丢。
+  The daily hint lists the topics the user marked sensitive (Q6), including any they added in their own words, and says to save them only with `note --private`; if the user chose to be asked first (Q7), it says to ask. It says to add `--target` when the user names a note, and to use `propose` only to fix or remove what is already there, so the source label is kept.
+- 这套记录规则以前只在 `brainlib next` 没事可做时出现，现在设置做完以后每一步都带着。以前库里有一件待办，AI 就看不到它们。
+  These recording rules used to appear only when `brainlib next` had nothing else to do; once setup is done, every step now carries them. A single pending task used to hide them.
+- `propose` 的内容里如果有目标笔记原来没有的来源标记，比如 `[said …]`，会被拒绝。这类标记只能由 `note` 加上。
+  `propose` refuses text with a source label such as `[said …]` that the target note does not already have; only `note` adds those labels.
+- 不是 UTF-8 编码的笔记，比如老版本记事本存的文件，brainlib 一律不改，`health` 会列出来，请用户另存一次。以前往里加内容会把整篇写成乱码。
+  Notes not saved as UTF-8, such as files from older Notepad versions, are never changed; `health` lists them so the user can save them again. Adding to them used to garble the whole note.
+- 根目录的 `me.md` 没写层级时按核心页算。接手已有的笔记文件夹以后，第一次记下的偏好在每次对话开头也会读到。
+  A top-level `me.md` without a tier counts as a core page, so the first preference saved in an adopted folder is read at the start of every conversation.
+- 电脑上的 `python3` 版本太旧时，`RUN:` 行会换成能跑 brainlib 的那个 Python，`AGENTS.md` 也写了旧版本怎么办。
+  When `python3` is too old, the `RUN:` lines name a Python that can run brainlib, and `AGENTS.md` says what to do about an old version.
+- `connect` 说明网页版和手机 App 里的 AI 跑不了命令，接不上。工具不让改它自己的权限文件时，AI 不绕过去（终端命令也不行），请用户自己加，`doctor` 的那条待办里也写明了。
+  `connect` says that AIs in a web page or phone app cannot run commands, so they cannot be connected. When a tool blocks edits to its own permission files, the agent asks the user to add the lines instead of working around it (shell commands included); the `doctor` item says so too.
 
 ### v0.1.3（2026-10-20）
 

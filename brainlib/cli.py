@@ -6,6 +6,7 @@ Every error prints two lines, `ERROR:` and `FIX:`, and exits with a documented c
 
 import argparse
 import builtins
+import collections
 import functools
 import json
 import os
@@ -670,6 +671,7 @@ def cmd_propose(args):
         content = args.text
     if content is None:
         raise BrainError("No content given.", fix='Pass --text "..." or --file PATH (or --text - to read from stdin).')
+    _refuse_new_source_labels(lib, args.path, content)
     p = proposals.create(lib, args.op, args.path, content, args.reason, actor=_actor(args), heading=args.heading)
     _emit(
         args,
@@ -678,6 +680,23 @@ def cmd_propose(args):
         + "\nNEXT: show this to the user. If they agree: brainlib apply %s --as %s --user-said \"<their words>\"" % (p["id"], lib.owner),
     )
     return EXIT_OK
+
+
+SOURCE_LABEL = re.compile(r"\[(?:said(?: [0-9-]+)?|judgment|extracted(?::[^\]]*)?|inferred|guess|external(?::[^\]]*)?)\]")
+
+
+def _refuse_new_source_labels(lib, target, content):
+    try:
+        old = safe_resolve(lib.root, target).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError, BrainError):
+        old = ""
+    if collections.Counter(SOURCE_LABEL.findall(content)) - collections.Counter(SOURCE_LABEL.findall(old)):
+        raise BrainError(
+            "The text has a source label such as [said ...] that is not in %s yet. Only brainlib note adds these labels." % target,
+            fix='For something the user told you, run: brainlib note "<their exact words>" --said --target %s. '
+            "Use propose only to fix or remove what is already in a note." % target,
+            code=EXIT_USAGE,
+        )
 
 
 def _interactive_review(lib, ps):
