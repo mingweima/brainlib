@@ -248,6 +248,24 @@ class InboxTests(Base):
         code, out = self.cli("find", "早上喝什么", "--library", str(self.root), "--json")
         self.assertEqual(json.loads(out)["not_filed"], [])
 
+    def test_note_now_turns_it_into_a_labelled_change_at_once(self):
+        self.write("projects/house.md", "# House\n\nThe budget is in the budget note.\n")
+        lib = self.lib({})
+        args = ("note", "add 20k to the renovation budget", "--said", "--target", "projects/house.md", "--now")
+        code, out = self.cli(*args, "--library", str(self.root))
+        self.assertEqual(code, 0, out)
+        self.assertIn("NEXT: show this to the user", out)
+        self.assertIn("[said %s] add 20k" % today().isoformat(), out)
+        [p] = proposals.list_proposals(lib, states=("open",))
+        code, out = self.cli(*args, "--library", str(self.root))
+        self.assertIn(p["id"], out)
+        self.assertEqual(len(proposals.list_proposals(lib, states=("open",))), 1)
+        code, out = self.cli("note", "some words", "--said", "--now", "--library", str(self.root))
+        self.assertEqual(code, 2, out)
+        argv = mcp._argv_for("kb_note", {"text": "x", "provenance": "said", "private": False, "now": True}, None)
+        self.assertIn("--not-sensitive", argv)
+        self.assertIn("--now", argv)
+
 
 class ProposalTests(Base):
     def setUp(self):
@@ -505,8 +523,13 @@ class ConnectTests(Base):
         nextstep.mark_done(lib, "connect")
         nextstep.mark_reviewed(lib)
         code, out = self.cli("note", "likes window seats", "--said", "--target", "me.md", "--library", str(self.root))
+        self.assertEqual(code, 2, out)
+        self.assertIn("Health", out)
+        code, out = self.cli(
+            "note", "likes window seats", "--said", "--not-sensitive", "--target", "me.md", "--library", str(self.root)
+        )
         self.assertEqual(code, 0, out)
-        self.assertIn("right away", out)
+        self.assertIn("again with --now", out)
         s = nextstep.compute(lib)
         self.assertEqual(s["key"], "classify")
         self.assertIn("sensitive (onboarding Q6): Health.", s["rules"])

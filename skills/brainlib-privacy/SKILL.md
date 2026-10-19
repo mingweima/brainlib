@@ -41,7 +41,7 @@ description: 隐私分级、加密保险箱、密码拦截、私有词表和分�
 
 ## 用户第 7 题的选择
 
-用户在第 6 题勾的敏感话题，`brainlib next` 没事可做时会列出来。涉及这些话题的内容一律用 `brainlib note … --private` 记，brainlib 会按第 7 题处理。
+用户在第 6 题勾的敏感话题，设置做完以后 `brainlib next` 每次都会列出来。涉及这些话题的内容一律用 `brainlib note … --private` 记，brainlib 会按第 7 题处理；其他记录加 `--not-sensitive`。
 
 | 第 7 题 | brainlib 怎么做 | 你要做的 |
 |---|---|---|

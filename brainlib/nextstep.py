@@ -303,19 +303,21 @@ def _compute(lib, lang):
 def daily_rules(lib, settings):
     """How to read and record during any conversation once setup is done, whatever the step."""
     journal = next((z["path"] for z in lib.config.get("zones") or [] if z.get("stream") and z.get("path")), None)
+    sensitive = _sensitive_line(lib, settings)
     return (
         "Once per conversation, before your first answer: run brainlib index and read every core page (L0) it lists "
         "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
         "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
-        "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said\n"
-        "If the user says which note it belongs in, add --target <that note's path>.\n"
+        "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said%s\n"
+        % (" plus --private or --not-sensitive (next line)" if sensitive else "")
+        + sensitive
+        + "If the user says which note it belongs in, add --target <that note's path> --now, and show the user the change it prints.\n"
         "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
         + (
             "If it is something that happened or is planned (a trip, an event, how the day went), add --target %s%s.md.\n"
             % (journal.rstrip("/") + "/", today().isoformat())
             if journal else ""
         )
-        + _sensitive_line(lib, settings)
         + "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
         "What the user tells you always goes through brainlib note; use brainlib propose only to fix or remove "
         "something already in a note.\n"
@@ -324,20 +326,13 @@ def daily_rules(lib, settings):
 
 
 def _sensitive_line(lib, settings):
-    if settings.get("private_handling") == "normal":
-        return ""
-    q = next(q for q in onboard.load_questions()["questions"] if q["key"] == "sensitive_topics")
-    chosen = set(settings.get("sensitive_topics") or []) - {"none", "other"}
-    names = [o["en"] for o in q["options"] if o.get("value") in chosen]
-    other = (onboard.profile(lib)["answers"].get(q["id"]) or {}).get("other_text")
-    if other:
-        names.append('"%s"' % other)
+    names = onboard.sensitive_topic_names(lib, settings)
     if not names:
         return ""
     line = (
-        "The user marked these topics as sensitive (onboarding Q6): %s. Anything about them goes only through "
-        "brainlib note ... --private, never through propose; brainlib then handles it the way the user chose (Q7).\n"
-        % "; ".join(names)
+        "The user marked these topics as sensitive (onboarding Q6): %s. A note about one of them gets --private "
+        "(and never goes through propose); any other note gets --not-sensitive. brainlib then handles private "
+        "things the way the user chose (Q7).\n" % "; ".join(names)
     )
     if settings.get("private_handling") == "ask_first":
         line += "Before reading or using anything about these topics, ask the user first (onboarding Q7).\n"

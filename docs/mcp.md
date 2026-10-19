@@ -49,7 +49,7 @@ Windows:
 | kb_lang | `brainlib lang` |
 | kb_doctor | `brainlib doctor` |
 | kb_find / kb_read / kb_index / kb_health | `find` / `read` / `index` / `health` |
-| kb_note | `brainlib note` (`provenance`: said, judgment, extracted, inferred, guess, external) |
+| kb_note | `brainlib note` (`provenance`: said, judgment, extracted, inferred, guess, external; `private`: true or false, needed once the user has marked sensitive topics; `now` with `target`: make the suggested change right away) |
 | kb_onboard | `brainlib onboard` |
 | kb_classify | `brainlib classify` |
 | kb_proposals | `brainlib review` |

@@ -562,9 +562,21 @@ def cmd_note(args):
             fix="Only save what the user said or wrote. If they want more recorded, ask them about Q5.",
             code=4,
         )
+    if args.private and args.not_sensitive:
+        raise BrainError("--private and --not-sensitive cannot both be set.", fix="Keep the one that fits.")
+    if args.now and not args.target:
+        raise BrainError("--now needs --target.", fix="Add --target <the note the user named>, or leave out --now.")
     text = " ".join(args.text)
     if text.strip() == "-":
         text = sys.stdin.read()
+    privacy.refuse_if_secret(text)
+    topics = onboard.sensitive_topic_names(lib, settings)
+    if topics and not (args.private or args.not_sensitive):
+        raise BrainError(
+            "The user marked some topics as sensitive (onboarding Q6: %s), so every note must say whether it is "
+            "about one of them. Nothing was saved." % "; ".join(topics),
+            fix="If it is about one of them, run the same command with --private. If it is not, add --not-sensitive.",
+        )
     item, dup = inbox.add(
         lib,
         text,
@@ -578,6 +590,8 @@ def cmd_note(args):
         sensitivity="private" if args.private else "internal",
         private_handling=settings.get("private_handling", "exclude"),
     )
+    if args.now:
+        return _file_now(args, lib, dup or item["id"], args.target)
     if dup:
         _emit(args, {"duplicate_of": dup}, "ALREADY SAVED as %s. Nothing new was written." % dup)
         return EXIT_OK
@@ -594,8 +608,42 @@ def cmd_note(args):
             "Tell the user they can open that note and save it again with UTF-8 encoding." % target
         )
     elif target:
-        msg += "\nIf the user wants it in %s right away: run brainlib classify, then go through brainlib review with them." % target
+        msg += "\nIf the user asked for it to go in %s now, run the same command again with --now." % target
     _emit(args, {"saved": item["id"], "provenance": item["provenance"]}, msg)
+    return EXIT_OK
+
+
+def _file_now(args, lib, item_id, target):
+    def find():
+        return next((i for i in inbox.all_items(lib) if i["id"] == item_id), None)
+
+    it = find()
+    if it and it["status"] == "pending":
+        classify.run(lib, actor=_actor(args), only={item_id})
+        it = find()
+    data = {"saved": item_id, "status": it and it["status"], "proposal": it and it.get("status_ref")}
+    if not it or it["status"] == "private-held":
+        msg = "SAVED as %s. It is private, so it stays out of the notes." % item_id
+    elif it["status"] == "duplicate":
+        msg = "%s already says this, so nothing needs changing." % target
+    elif it.get("status_ref"):
+        p = proposals.get(lib, it["status_ref"])
+        if p["status"] == "applied":
+            msg = "ADDED to %s, with its source label." % p["target"]
+            if p.get("approval") == "auto":
+                msg += " The user lets this kind of change in without asking (onboarding Q4)."
+        elif p["status"] != "open":
+            msg = "This was already suggested as %s, and the user's answer was: %s." % (p["id"], p["status"])
+        else:
+            msg = proposals.render(p) + (
+                "\nNEXT: show this to the user. If they agree: brainlib apply %s --as %s --user-said \"<their words>\""
+                % (p["id"], lib.owner)
+            )
+            if p["target"] != target:
+                msg += "\n%s cannot take it, so brainlib suggests %s instead; tell the user." % (target, p["target"])
+    else:
+        msg = "SAVED as %s, but it could not be turned into a suggested change now. It waits for brainlib classify." % item_id
+    _emit(args, data, msg)
     return EXIT_OK
 
 
@@ -1059,8 +1107,10 @@ def build_parser():
     g.add_argument("--guess", action="store_true", help="your guess")
     g.add_argument("--external", metavar="SOURCE", help="outside material (name the source)")
     s.add_argument("--said-at", help="when the user said it (YYYY-MM-DD)")
-    s.add_argument("--private", action="store_true", help="sensitive: goes to the vault or is refused")
+    s.add_argument("--private", action="store_true", help="about a topic the user marked sensitive (Q6): handled as they chose (Q7)")
+    s.add_argument("--not-sensitive", action="store_true", help="not about any topic the user marked sensitive")
     s.add_argument("--target", help="the note it probably belongs in")
+    s.add_argument("--now", action="store_true", help="with --target: make the suggested change right away (the user named the note)")
     s.add_argument("--tag", action="append")
     s.add_argument("--source-kind", default="conversation", choices=inbox.SOURCE_KINDS)
     s = add("inbox", cmd_inbox, "list inbox items")

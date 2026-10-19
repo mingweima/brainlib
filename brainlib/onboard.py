@@ -258,6 +258,20 @@ def settings(lib):
     return s
 
 
+def sensitive_topic_names(lib, settings_=None):
+    """The topics the user marked sensitive (Q6), unless they want no special handling for them (Q7)."""
+    s = settings_ or settings(lib)
+    if s.get("private_handling") == "normal":
+        return []
+    q = next(q for q in load_questions()["questions"] if q["key"] == "sensitive_topics")
+    chosen = set(s.get("sensitive_topics") or []) - {"none", "other"}
+    names = [o["en"] for o in q["options"] if o.get("value") in chosen]
+    other = (profile(lib)["answers"].get(q["id"]) or {}).get("other_text")
+    if other:
+        names.append('"%s"' % other)
+    return names
+
+
 def allows_provenance(settings_, prov):
     """Does the user's record policy allow saving this kind of statement?"""
     policy = settings_.get("record_policy", "important")

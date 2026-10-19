@@ -110,10 +110,13 @@ def _command_assignments(lib, cmd, items, notes):
     return None
 
 
-def run(lib, actor="agent/unknown", limit=200, dry_run=False):
+def run(lib, actor="agent/unknown", limit=200, dry_run=False, only=None):
     settings = onboard.settings(lib)
     proposals.require_not_read_only(settings)
-    items = [i for i in inbox.all_items(lib) if i["status"] == "pending" and i.get("text")]
+    items = [
+        i for i in inbox.all_items(lib)
+        if i["status"] == "pending" and i.get("text") and (only is None or i["id"] in only)
+    ]
     held = [i for i in items if not onboard.allows_provenance(settings, i["provenance"])]
     items = [i for i in items if onboard.allows_provenance(settings, i["provenance"])][:limit]
     summary = {"items": len(items), "held_by_record_policy": len(held), "proposals": [], "duplicates": 0, "auto_applied": 0}

@@ -37,8 +37,10 @@
   Passwords, keys, card and ID numbers already in notes are hidden whenever `read`, the index, `llms.txt` or `find` shows them to the agent. To change such a note, the agent leaves the hidden lines alone or asks the user to edit them.
 - 一次改动把密钥从笔记里删掉时，撤销用的备份里也把它遮住，这篇笔记以前的备份一并遮住。撤销以后密钥不会回来，所以先确认用户已经存进密码管理器。
   When a change removes a secret from a note, the undo backup hides it too, and so do older backups of that note. Undo will not bring it back, so the user should save it in a password manager first.
-- 日常提示列出用户在第 6 题勾的敏感话题，连同他自己补充的，提醒这些只能用 `note --private` 记；第 7 题选了「读或用之前先问我」的，还会提醒先问。用户点名记进哪篇，就加 `--target` 指向那篇。用户说的话一律用 `note` 记，`propose` 只用来改或删已有的内容，来源标记就不会丢。
-  The daily hint lists the topics the user marked sensitive (Q6), including any they added in their own words, and says to save them only with `note --private`; if the user chose to be asked first (Q7), it says to ask. It says to add `--target` when the user names a note, and to use `propose` only to fix or remove what is already there, so the source label is kept.
+- 用户在第 6 题勾过敏感话题以后，每条 `note` 都要表态，涉及这些话题的加 `--private`，其他的加 `--not-sensitive`，两个都没加就不存。日常提示会列出这些话题，连同用户自己补充的；第 7 题选了「读或用之前先问我」的，还会提醒先问。
+  Once the user has marked sensitive topics (Q6), every `note` must say `--private` (about one of them) or `--not-sensitive`; with neither, nothing is saved. The daily hint lists the topics, including any the user added in their own words, and if the user chose to be asked first (Q7), it says to ask.
+- 用户点名记进哪篇时，`note --target <那篇> --now` 当场生成带「用户原话」标记的修改建议，和 `propose` 一样快。用户说的话一律用 `note` 记，`propose` 只用来改或删已有的内容，来源标记就不会丢。
+  When the user names the note, `note --target <that note> --now` makes the suggested change right away, with the "user said" label, as quickly as `propose` would. What the user says always goes through `note`; `propose` is only for fixing or removing what is already there, so the source label is kept.
 - 这套记录规则以前只在 `brainlib next` 没事可做时出现，现在设置做完以后每一步都带着。以前库里有一件待办，AI 就看不到它们。
   These recording rules used to appear only when `brainlib next` had nothing else to do; once setup is done, every step now carries them. A single pending task used to hide them.
 - `propose` 的内容里如果有目标笔记原来没有的来源标记，比如 `[said …]`，会被拒绝。这类标记只能由 `note` 加上。
