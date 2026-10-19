@@ -7,6 +7,7 @@ it means the user must be warned before trusting it with their notes.
 """
 
 import json
+import os
 import random
 import re
 import string
@@ -194,10 +195,9 @@ def finish(model=None):
     gs.setdefault("agent_checks", []).append(result)
     gs.pop("agent_check_session", None)
     config.save_global_state(gs)
-    if result["passed"]:
-        say = i18n.t("check_pass_small" if small else "check_pass", s["lang"])
-    else:
-        say = i18n.t("check_fail", s["lang"], score=score, total=TOTAL)
+    key = ("check_pass_small" if small else "check_pass") if result["passed"] else "check_fail"
+    chosen = i18n.normalize(os.environ.get("BRAINLIB_LANG")) or i18n.normalize(gs.get("lang"))
+    say = i18n.t(key, chosen, score=score, total=TOTAL) if chosen else i18n.both(key, score=score, total=TOTAL)
     return result, say
 
 

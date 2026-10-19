@@ -18,3 +18,7 @@ mark each line with where it came from, for example `[said 2026-01-31]`.
 ## How I like things done
 
 ## Current priorities
+
+## Recently noted
+
+New things I tell my AI land here first. When I tidy up, I move them to the right section above.

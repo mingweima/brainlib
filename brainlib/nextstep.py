@@ -78,7 +78,11 @@ def preflight(actor, lang, lang_chosen):
             "agent-check-warn",
             "Tell the user the result of your self-check.",
             "You got %d of %d right; the user should decide how much to trust you with their notes." % (last["score"], last["total"]),
-            say=i18n.t("check_fail", lang, score=last["score"], total=last["total"]),
+            say=(
+                i18n.t("check_fail", lang, score=last["score"], total=last["total"])
+                if lang_chosen
+                else i18n.both("check_fail", score=last["score"], total=last["total"])
+            ),
             run=[
                 "After telling the user: brainlib agent-check ack",
                 "If the user wants read-only mode, answer onboarding question Q4 with a when you get there.",

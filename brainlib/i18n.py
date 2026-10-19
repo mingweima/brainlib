@@ -111,3 +111,8 @@ def t(key, lang=None, **kw):
     block = MESSAGES[key]
     text = block.get(lang) or block["en"]
     return text.format(**kw) if kw else text
+
+
+def both(key, **kw):
+    """Chinese then English, for what is said before the user has picked a language."""
+    return "%s\n%s" % (t(key, "zh", **kw), t(key, "en", **kw))

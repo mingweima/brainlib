@@ -328,6 +328,17 @@ class ClassifyTests(Base):
         self.assertEqual([e["path"] for e in scan.find(lib, "what do I drink in the morning")][:1], [])
         self.assertIn("drink tea", scan.find_noted(lib, "what do I drink in the morning")[0]["line"])
 
+    def test_new_lines_on_me_land_under_recently_noted(self):
+        for lang, heading in (("en", "## Recently noted"), ("zh", "## 最近记下的")):
+            os.environ["BRAINLIB_LANG"] = lang
+            root = self.tmp / ("me-" + lang)
+            self.cli("init", str(root))
+            lib = config.load(str(root))
+            p = proposals.create(lib, "append", "me.md", "- [said 2026-10-20] likes oolong", "profile")
+            proposals.apply(lib, p["id"], approved_by="human:me", user_words="yes")
+            text = (root / "me.md").read_text(encoding="utf-8")
+            self.assertGreater(text.index("likes oolong"), text.index(heading), lang)
+
 
 class OnboardingTests(Base):
     def test_questions_complete_and_bilingual(self):
@@ -465,6 +476,17 @@ class AgentCheckTests(Base):
             self.assertTrue(agentcheck.is_small_model(name), name)
         for name in ("Gemini 4 Argon", "MiniMax-M2", "Llama 3.1 70B", "DeepSeek-R1 671B", "Mistral Large 123B", "", None):
             self.assertFalse(agentcheck.is_small_model(name), name)
+
+    def test_result_is_said_in_both_languages_until_one_is_chosen(self):
+        for lang, has_zh in ((None, True), ("en", False)):
+            if lang:
+                self.cli("lang", lang)
+            s = agentcheck.start("agent/b")
+            for i, a in enumerate(self._answers(s), 1):
+                agentcheck.answer(i, a)
+            say = agentcheck.finish(model="test-model")[1]
+            self.assertEqual("自测" in say, has_zh, say)
+            self.assertIn("self-check", say)
 
     def _answers(self, s):
         target = [n["path"] for n in s["data"]["notes"] if n["tier"] == s["ask_tier"]][0]

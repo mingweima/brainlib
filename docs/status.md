@@ -1,4 +1,4 @@
-# v0.1.2 现状 / Status
+# v0.1.3 现状 / Status
 
 ## 能用的 / Works
 
@@ -30,6 +30,13 @@
 - 技能说明目前以中文为主，英文版只有 `AGENTS.en.md` 和 `README.en.md`。
 
 ## 更新记录 / Changes
+
+### v0.1.3（2026-10-20）
+
+- 用户选语言之前，brainlib 给 AI 的话中英两句都有。以前英文用户听到的第一句是中文。
+  Until the user picks a language, the lines brainlib gives the agent to say come in both Chinese and English. English-speaking users used to hear Chinese first.
+- 新建的 `me.md` 最后多了一节「最近记下的」，新记的事先放在这里。以前它们会排在「眼下的重点」下面。已经建好的库不变。
+  New libraries' `me.md` ends with a "Recently noted" section, where new lines land; they used to end up under "Current priorities". Existing libraries are unchanged.
 
 ### v0.1.2（2026-10-20）
 
