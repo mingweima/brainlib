@@ -164,6 +164,8 @@ def build_entry(lib, rel, text, mtime):
             tier = "L3"
         elif Path(rel).name.lower() in ("readme.md", "index.md") and "/" not in rel:
             tier = "L1"
+        elif rel.lower() == "me.md":
+            tier = "L0"
         else:
             tier = "L2"
     tier = str(tier).upper().strip()

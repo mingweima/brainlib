@@ -28,7 +28,7 @@ sensitivity: internal       # public | internal | private | secret
 |---|---|
 | title | first `# heading`, else the file name |
 | description | first paragraph, trimmed to 160 characters |
-| tier | `L3` if archived, or a journal entry older than `stream_days` (14); `L1` for a top-level `README.md` / `index.md`; else `L2` |
+| tier | `L3` if archived, or a journal entry older than `stream_days` (14); `L1` for a top-level `README.md` / `index.md`; `L0` for a top-level `me.md`; else `L2` |
 | authority | the zone's value, else `canonical` |
 | updated | `generated.at`, else the date in a journal entry's file name, else the modification date |
 | stale_after | `updated` + the tier's TTL (L0 90, L1 180, L2 365 days; L3 never) |

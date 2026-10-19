@@ -108,11 +108,15 @@ class FrontMatterTests(Base):
 class ScanTests(Base):
     def test_inference_and_legacy_values(self):
         self.write("README.md", "# Home\n\nThe entry page.\n")
+        self.write("me.md", "# Me\n\n- [said 2026-10-20] allergic to peanuts\n")
+        self.write("people/me.md", "# A note someone else called me\n")
         self.write("old.md", "---\nauthority: 归档\nttl: 30\nupdated: 2020-01-01\n---\n# Old\n")
         self.write("journal/2020-01-05.md", "# A day\n")
         lib = self.lib({})
         entries = {e["path"]: e for e in scan.scan_library(lib)["entries"]}
         self.assertEqual(entries["README.md"]["tier"], "L1")
+        self.assertEqual(entries["me.md"]["tier"], "L0")
+        self.assertEqual(entries["people/me.md"]["tier"], "L2")
         self.assertEqual(entries["old.md"]["authority"], "archived")
         self.assertEqual(entries["old.md"]["stale_after"], "2020-01-31")
         self.assertTrue(entries["journal/2020-01-05.md"]["stream"])
