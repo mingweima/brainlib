@@ -158,9 +158,9 @@ def add(
             raise BrainError(
                 "Sensitive things are kept out of the library (onboarding Q7), so this was NOT saved.",
                 fix="Do not save it anywhere else, and do not put it into a note with propose either. Tell the user it "
-                "was not saved because it is sensitive. If the user says this one is fine to keep, run the same command "
-                "with --not-sensitive instead of --private. If they want sensitive things kept in general, ask them "
-                "onboarding Q7 again.",
+                "was not saved because they chose to keep sensitive things out of the library (onboarding Q7), and ask "
+                "whether to keep this one anyway. If they say yes, run the same command with --not-sensitive instead of "
+                "--private, and run brainlib onboard signal Q7 \"<their words>\" so that choice is checked again later.",
                 code=EXIT_PRIVACY,
             )
         if vault.is_initialized(lib) and vault.age_bin():
