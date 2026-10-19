@@ -8,13 +8,27 @@ it means the user must be warned before trusting it with their notes.
 
 import json
 import random
+import re
 import string
 
 from . import config, i18n
 from .util import BrainError, now_iso, strip_dot_slash
 
 TOTAL = 4
-SMALL_MODEL_HINTS = ("mini", "flash", "lite", "haiku", "nano", "small", "tiny", "-fast", "1b", "3b", "7b", "8b", "9b", "14b")
+SMALL_MODEL_WORDS = frozenset(("mini", "flash", "lite", "haiku", "nano", "small", "tiny", "fast"))
+SMALL_MODEL_MAX_BILLIONS = 14
+
+
+def is_small_model(name):
+    """Judge by whole words, so "Gemini" does not count as "mini" and "671B" does not count as "1B"."""
+    for word in re.split(r"[^a-z0-9.]+", (name or "").lower()):
+        word = word.strip(".")
+        if word in SMALL_MODEL_WORDS:
+            return True
+        size = re.fullmatch(r"(\d+(?:\.\d+)?)b", word)
+        if size and float(size.group(1)) <= SMALL_MODEL_MAX_BILLIONS:
+            return True
+    return False
 
 PROVENANCE_POOL = [
     {
@@ -164,7 +178,7 @@ def finish(model=None):
     ok = _score(s)
     score = sum(1 for v in ok.values() if v)
     model = model or s.get("model")
-    small = bool(model) and any(h in model.lower() for h in SMALL_MODEL_HINTS)
+    small = is_small_model(model)
     result = {
         "actor": s["actor"],
         "model": model,

@@ -49,7 +49,7 @@ def mark_reviewed(lib):
     write_json(lib.state("last-review.json"), {"at": today().isoformat()})
 
 
-def _review_due(lib, settings, open_count):
+def review_due(lib, settings, open_count):
     days = settings.get("review_cadence_days")
     if open_count >= 10:
         return True
@@ -222,7 +222,7 @@ def compute(lib, lang="zh"):
             run=["brainlib apply --auto"],
         )
     owner = [p for p in open_ps if p.get("approval") == "owner"]
-    if owner and _review_due(lib, settings, len(owner)) and "review" not in snoozed:
+    if owner and review_due(lib, settings, len(owner)) and "review" not in snoozed:
         return step(
             "review",
             "Go through %d suggested change(s) with the user." % len(owner),
@@ -276,9 +276,14 @@ def compute(lib, lang="zh"):
             snoozable=True,
         )
 
+    journal = next((z["path"] for z in lib.config.get("zones") or [] if z.get("stream") and z.get("path")), None)
+    waiting = (
+        " %d suggested change(s) wait for the user's next review, as often as the user chose (onboarding Q8)." % len(owner)
+        if owner else ""
+    )
     return step(
         "all-clear",
-        "Nothing is waiting. Help the user with whatever they ask.",
+        "Nothing needs doing now.%s Help the user with whatever they ask." % waiting,
         "The library is up to date.",
         extra=(
             "Once per conversation, before your first answer: run brainlib index and read every core page (L0) it lists "
@@ -286,7 +291,12 @@ def compute(lib, lang="zh"):
             "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
             "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said\n"
             "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
-            "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
+            + (
+                "If it is something that happened or is planned (a trip, an event, how the day went), add --target %s%s.md.\n"
+                % (journal.rstrip("/") + "/", today().isoformat())
+                if journal else ""
+            )
+            + "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
             "Never edit note files directly, never open the vault, never store passwords."
         ),
     )

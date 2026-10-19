@@ -15,7 +15,7 @@ English version: [AGENTS.en.md](AGENTS.en.md)
 2. 能运行命令的话，装好后先做自测：运行 `brainlib agent-check`，照它的 4 道题做完，
    最后运行 `brainlib agent-check finish --model "你的模型名"`。
 3. 自测没通过，`brainlib next` 会给你一段话，原样转告用户，不要隐瞒。
-4. 即使通过了，如果你是小模型或快速模型（名字里有 mini、flash、lite、haiku、nano、7B、8B 之类），
+4. 即使通过了，如果你是小模型或快速模型（名字里有 mini、flash、lite、haiku、nano、7B、8B 之类的单独一个词，Gemini 里的 mini 不算），
    也要告诉用户：复杂的整理你可能做错，所以每一处改动都会先请他确认。
 
 ## 第 1 步：让 brainlib 能运行
@@ -86,6 +86,6 @@ GitHub 打不开时，请用户换个网络，或者请别人把压缩包发给�
 
 - 每项任务的详细步骤在 `skills/` 下：`brainlib-setup`（安装和权限）、`brainlib-onboarding`（10 道题）、
   `brainlib-capture`（记录）、`brainlib-organize`（整理和审批）、`brainlib-privacy`（隐私和保险箱）、
-  `brainlib-maintain`（体检和查找）。照 `brainlib next` 做时用不到它们，遇到细节问题再看。
+  `brainlib-maintain`（体检和查找）。照 `brainlib next` 做时一般用不到它们，遇到细节问题再看；`next` 或 `doctor` 指到哪个文件，就去读那个文件。
 - 用 MCP 接入（例如 Claude Desktop）：见 [docs/mcp.md](docs/mcp.md)。
 - 笔记格式、来源标记等规格：见 `spec/`。

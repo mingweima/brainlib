@@ -592,7 +592,14 @@ def cmd_classify(args):
     for e in s.get("errors") or []:
         lines.append("  could not propose for %s: %s" % (e.get("target") or e.get("proposal"), e["error"]))
     if any(p.get("approval") == "owner" for p in s["proposals"]):
-        lines.append("NEXT: these need the user's yes. Run `brainlib review` and go through them with the user.")
+        waiting = [p for p in proposals.list_proposals(lib, states=("open",)) if p.get("approval") == "owner"]
+        if nextstep.review_due(lib, onboard.settings(lib), len(waiting)):
+            lines.append("NEXT: these need the user's yes. Run `brainlib review` and go through them with the user.")
+        else:
+            lines.append(
+                "These wait for the user's next review, as often as the user chose (onboarding Q8); brainlib next "
+                "brings them up when it is time. If the user wants to see them now, run `brainlib review`."
+            )
     print("\n".join(lines))
     return EXIT_OK
 

@@ -12,6 +12,8 @@ from pathlib import Path
 
 from . import config, vault
 
+PERMISSION_TEMPLATES = Path(__file__).resolve().parent.parent / "templates" / "agent-permissions"
+
 SYNC_MARKERS = {
     "iCloud": ("mobile documents", "icloud drive", "iclouddrive", "com~apple~clouddocs"),
     "OneDrive": ("onedrive",),
@@ -130,9 +132,20 @@ def check(lib=None):
         except OSError:
             r["library_writable"] = False
             todo.append("The library folder cannot be written. " + (_protected_hint(lib.root, osn) or "Check its permissions."))
+    folder = lib.root if lib else "<library folder>"
     todo.append(
         "Limit what your own AI tool may do: allow brainlib commands, block reading vault/ and private/, and block "
-        "editing notes directly. Ready-made settings are in templates/agent-permissions/ (see its README.md)."
+        "editing notes directly. Cursor: add the lines of %s to %s. Claude Code: merge %s into %s, replacing "
+        "/ABSOLUTE/PATH/TO/brainlib with %s. Other tools: set the same three limits in their permission settings "
+        "(details: %s)."
+        % (
+            PERMISSION_TEMPLATES / "cursorignore.txt",
+            Path(str(folder)) / ".cursorignore",
+            PERMISSION_TEMPLATES / "claude-code.settings.json",
+            Path(str(folder)) / ".claude" / "settings.json",
+            PERMISSION_TEMPLATES.parent.parent,
+            PERMISSION_TEMPLATES / "README.md",
+        )
     )
     return r
 

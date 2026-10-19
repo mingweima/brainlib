@@ -15,7 +15,7 @@ The user does not need to know Python or the command line: you run all commands,
 2. If you can run commands, run the self-test first after setup: run `brainlib agent-check`, complete its 4 questions as instructed,
    and finally run `brainlib agent-check finish --model "your model name"`.
 3. If you do not pass the self-test, `brainlib next` will give you a message. Relay it to the user word for word and do not hide anything.
-4. Even if you pass, if you are a small or fast model (with words like mini, flash, lite, haiku, nano, 7B, or 8B in your name),
+4. Even if you pass, if you are a small or fast model (with a separate word like mini, flash, lite, haiku, nano, 7B, or 8B in your name; the "mini" inside "Gemini" does not count),
    tell the user that you might make mistakes on complex organization tasks, so you will ask them to confirm every change first.
 
 ## Step 1: Make brainlib Run
@@ -86,6 +86,6 @@ If you try two different ways to fix the same error and neither works, stop and 
 
 - Detailed steps for each task are in `skills/`: `brainlib-setup` (installation and permissions), `brainlib-onboarding` (the 10 questions),
   `brainlib-capture` (recording notes), `brainlib-organize` (organizing and approval), `brainlib-privacy` (privacy and vault),
-  and `brainlib-maintain` (health checks and search). You do not need them while following `brainlib next`; read them only when you run into detailed questions.
+  and `brainlib-maintain` (health checks and search). You usually do not need them while following `brainlib next`; read them when you run into detailed questions, and whenever `next` or `doctor` points you to a file, read that file.
 - To connect via MCP (for example, in Claude Desktop): see [docs/mcp.md](docs/mcp.md).
 - Specifications for note formats, source tags, and more: see `spec/`.

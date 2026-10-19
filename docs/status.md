@@ -1,4 +1,4 @@
-# v0.1.1 现状 / Status
+# v0.1.2 现状 / Status
 
 ## 能用的 / Works
 
@@ -30,6 +30,17 @@
 - 技能说明目前以中文为主，英文版只有 `AGENTS.en.md` 和 `README.en.md`。
 
 ## 更新记录 / Changes
+
+### v0.1.2（2026-10-20）
+
+- 自测判断小模型改成按整个词看。以前 Gemini 因为名字里含 mini，会被当成小模型，AI 会对用户说自己是小模型。
+  The self-check now judges small models by whole words, so "Gemini" no longer counts as "mini".
+- 用户选了每周或每月看一次整理建议时，`classify` 不再叫 AI 马上拿给用户看，和 `brainlib next` 的说法一致了。
+  When the user chose weekly or monthly reviews, `classify` no longer tells the agent to review right away, matching `brainlib next`.
+- 日常提示教 AI 把发生过或计划中的事记进当天的日记。用户在第 4 题允许日记直接记时，这类记录会直接写进去。
+  The daily hints tell agents to put events and plans in today's journal, so the user's choice to let journal entries go in directly takes effect.
+- `brainlib doctor` 写明每个工具的权限该改哪个文件、用哪份模板，路径都是完整路径。
+  `brainlib doctor` now names the exact file and template for each tool's permissions, with full paths.
 
 ### v0.1.1（2026-10-20）
 

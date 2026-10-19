@@ -439,8 +439,33 @@ class ConnectTests(Base):
         nextstep.snooze(lib, "private")
         self.assertNotEqual(nextstep.compute(lib)["key"], "private")
 
+    def test_suggestions_wait_for_the_review_the_user_chose(self):
+        lib = self.lib({"zones": [{"path": "journal/", "stream": True, "auto_apply": True}]})
+        self.write("me.md", "---\ntier: L0\n---\n# Me\n")
+        for q in onboard.load_questions()["questions"]:
+            onboard.answer(lib, q["id"], {"Q4": "c", "Q8": "b"}.get(q["id"], "a"))
+        nextstep.mark_done(lib, "permissions")
+        nextstep.mark_done(lib, "connect")
+        nextstep.mark_reviewed(lib)
+        inbox.add(lib, "likes window seats", "said", target="me.md")
+        code, out = self.cli("classify", "--library", str(self.root))
+        self.assertEqual(code, 0, out)
+        self.assertIn("next review", out)
+        self.assertNotIn("NEXT:", out)
+        scan.scan_library(lib)
+        s = nextstep.compute(lib)
+        self.assertEqual(s["key"], "all-clear")
+        self.assertIn("1 suggested change(s) wait", s["next"])
+        self.assertIn("--target journal/%s.md" % today().isoformat(), s["extra"])
+
 
 class AgentCheckTests(Base):
+    def test_small_model_is_judged_by_whole_words(self):
+        for name in ("gpt-4o-mini", "Gemini 2.0 Flash", "claude-3-haiku", "Qwen2.5-7B-Instruct", "composer-2.5-fast", "Llama 3.2 3B"):
+            self.assertTrue(agentcheck.is_small_model(name), name)
+        for name in ("Gemini 4 Argon", "MiniMax-M2", "Llama 3.1 70B", "DeepSeek-R1 671B", "Mistral Large 123B", "", None):
+            self.assertFalse(agentcheck.is_small_model(name), name)
+
     def _answers(self, s):
         target = [n["path"] for n in s["data"]["notes"] if n["tier"] == s["ask_tier"]][0]
         right = "abc"[[o["ok"] for o in s["privacy"]].index(True)]
