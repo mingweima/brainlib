@@ -449,10 +449,32 @@ def _tokens(text):
     return words
 
 
+# Words that say nothing about the topic, including how people ask an agent to remember
+# something. Matching on them sends "I only drink tea in the morning" to whichever note
+# happens to contain "in".
+STOPWORDS = frozenset(
+    (
+        "about after again all also am an and any are as at be been before being both but by can could did do does "
+        "doing for from had has have having he her here hers him his how if in into is it its just me more most my "
+        "no nor not now of off on once only or other our out over own please same she should so some such than that "
+        "the their them then there these they this those through to too under until up us very was we were what "
+        "when where which while who whom why will with would you your remember"
+    ).split()
+    + "这个 那个 这些 那些 什么 怎么 一下 一个 我们 你们 他们 的时 时候 之前 之后 不是 就是 还是 可以 没有 已经 "
+    "因为 所以 如果 但是 然后 帮我 记一 记住 记得 我的 你的 一些 有点".split()
+)
+
+
+def _content_tokens(text, fallback=True):
+    """Topic words only. With fallback, a text made only of stopwords keeps all its words."""
+    words = _tokens(text)
+    return (words - STOPWORDS) or (words if fallback else set())
+
+
 def find(lib, query, limit=10):
     """Rank visible notes for a task or topic. Never returns private notes."""
     index = load_index(lib)
-    q = _tokens(query)
+    q = _content_tokens(query)
     if not q:
         return []
     results = []
@@ -490,7 +512,7 @@ def find_noted(lib, query, limit=5):
     """Inbox items that match the query but are not in any note yet (newest first among equals)."""
     from . import inbox
 
-    q = _tokens(query)
+    q = _content_tokens(query)
     if not q:
         return []
     hits = []

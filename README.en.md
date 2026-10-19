@@ -62,7 +62,7 @@ After a few months, it also checks those first multiple-choice answers with you 
 | Is it too complicated? | Either too simple, or complex from day one | **It starts simple.** By default it only suggests and never edits. Once you're comfortable, unlock more one level at a time, such as recording journal entries directly or adding a vault |
 | Does it speak my language? | Similar open-source tools are mostly English-only | **Chinese first, English too.** It asks your language before anything else, then sticks to it |
 
-Other projects have done some of these on their own. brainlib puts them together, comes with source labels and ask-before-editing from the start, and installs with one sentence.
+Other projects have done some of these on their own. brainlib puts them together, has source labels and ask-before-editing switched on from day one, and installs with one sentence.
 
 ## Getting started (no Python knowledge needed)
 

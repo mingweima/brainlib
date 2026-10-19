@@ -13,7 +13,7 @@ import re
 import subprocess
 
 from . import inbox, onboard, privacy, proposals, provenance
-from .scan import _tokens, load_index
+from .scan import _content_tokens, _tokens, load_index
 from .util import BrainError, new_id, now_iso, today_str, write_json
 
 THRESHOLD = 3.0
@@ -44,7 +44,7 @@ def _usable_suggestion(lib, target, writable):
 
 
 def best_target(candidates, text):
-    q = _tokens(text)
+    q = _content_tokens(text, fallback=False)
     best, best_score, best_words = None, 0.0, []
     for note, fields in candidates:
         score = 0.0

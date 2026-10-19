@@ -1,5 +1,6 @@
 """Small helpers shared by every module. Standard library only."""
 
+import contextlib
 import datetime as _dt
 import hashlib
 import json
@@ -136,6 +137,80 @@ def atomic_write(path, data, private=False):
 
 def write_json(path, obj, private=True):
     atomic_write(path, json.dumps(obj, ensure_ascii=False, indent=2) + "\n", private=private)
+
+
+_LOCK_DEPTH = [0]
+LOCK_ENV = "BRAINLIB_LOCK_HELD"
+
+
+@contextlib.contextmanager
+def command_lock(home, wait=60.0, stale=600.0):
+    """Let one brainlib command run at a time, so commands an agent starts in parallel
+    cannot overwrite each other's state. Nested calls in the same process, and brainlib
+    processes started by the holder, go straight through."""
+    if _LOCK_DEPTH[0] or os.environ.get(LOCK_ENV):
+        _LOCK_DEPTH[0] += 1
+        try:
+            yield
+        finally:
+            _LOCK_DEPTH[0] -= 1
+        return
+    path = ensure_private_dir(Path(home)) / "command.lock"
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            break
+        except FileExistsError:
+            if _lock_is_stale(path, stale):
+                try:
+                    os.unlink(str(path))
+                except OSError:
+                    pass
+                continue
+            if time.monotonic() > deadline:
+                raise BrainError(
+                    "Another brainlib command is still running.",
+                    fix="Wait for it to finish, then run this command again. Run brainlib commands one at a time. "
+                    "If no brainlib command is running, delete %s." % path,
+                )
+            time.sleep(0.05)
+    try:
+        os.write(fd, ("%d %f\n" % (os.getpid(), time.time())).encode("ascii"))
+    finally:
+        os.close(fd)
+    _LOCK_DEPTH[0] = 1
+    os.environ[LOCK_ENV] = str(os.getpid())
+    try:
+        yield
+    finally:
+        _LOCK_DEPTH[0] = 0
+        os.environ.pop(LOCK_ENV, None)
+        try:
+            os.unlink(str(path))
+        except OSError:
+            pass
+
+
+def _lock_is_stale(path, stale):
+    try:
+        pid, started = path.read_text(encoding="ascii").split()[:2]
+        pid, started = int(pid), float(started)
+    except (OSError, ValueError):
+        try:
+            return time.time() - path.stat().st_mtime > stale
+        except OSError:
+            return False
+    if time.time() - started > stale:
+        return True
+    if os.name != "nt":  # on Windows os.kill would terminate the process, so rely on age only
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        except OSError:
+            return False
+    return False
 
 
 def read_json(path, default=None):

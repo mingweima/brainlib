@@ -56,6 +56,8 @@ Run `brainlib next` repeatedly and follow its output. The output format is fixed
 - `SAY TO USER:` What to say to the user (speak in the language the user chose; you may read it out word for word)
 - `THEN:` Run `brainlib next` again when done
 
+Run one brainlib command at a time. Wait for it to finish and read its output before you run the next one. If you run several at once, a later one may still see the old state.
+
 `brainlib next` will guide you through every step in order: self-test → ask the user to choose a language → check the computer and choose where to put the library → set up permissions →
 10 multiple-choice questions to get to know the user → connect the AI tools the user works with → daily note-taking and organization. Ask the user only one question at a time, and never answer on the user's behalf.
 Once the tools are connected, every new conversation in them starts by running `brainlib next`, so the library keeps being read and kept up to date. brainlib speaks Chinese to the user until the user picks a language; the language question itself is shown in both Chinese and English.

@@ -285,6 +285,7 @@ def compute(lib, lang="zh"):
             "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
             "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
             "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said\n"
+            "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
             "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
             "Never edit note files directly, never open the vault, never store passwords."
         ),

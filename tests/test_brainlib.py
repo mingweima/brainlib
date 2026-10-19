@@ -8,8 +8,10 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from datetime import timedelta
 from pathlib import Path
@@ -31,7 +33,7 @@ from brainlib import (  # noqa: E402
     proposals,
     scan,
 )
-from brainlib.util import BrainError, atomic_write, today, write_json  # noqa: E402
+from brainlib.util import BrainError, atomic_write, command_lock, today, write_json  # noqa: E402
 
 FAKE_TOKEN = "gh" + "p_" + "Zx9" * 13
 FAKE_CARD = "4111" + "1111" + "1111" + "1111"
@@ -307,6 +309,26 @@ class ProposalTests(Base):
         self.assertEqual(os.stat(p).st_mode & 0o777, 0o644)
 
 
+class ClassifyTests(Base):
+    def test_function_words_do_not_pick_a_note(self):
+        for lang, said in (("en", "Remember that I only drink tea in the morning."), ("zh", "这个周末我想去爬山")):
+            os.environ["BRAINLIB_LANG"] = lang
+            root = self.tmp / ("lib-" + lang)
+            self.cli("init", str(root))
+            lib = config.load(str(root))
+            inbox.add(lib, said, "said")
+            targets = [p["target"] for p in classify.run(lib, dry_run=True)["proposals"]]
+            self.assertEqual(targets, ["inbox-unsorted.md"], lang)
+        root = self.tmp / "lib-en"
+        (root / "tea.md").write_text("---\ntitle: Tea\n---\n# Tea\n", encoding="utf-8")
+        lib = config.load(str(root))
+        scan.scan_library(lib)
+        targets = [p["target"] for p in classify.run(lib, dry_run=True)["proposals"]]
+        self.assertEqual(targets, ["tea.md"])
+        self.assertEqual([e["path"] for e in scan.find(lib, "what do I drink in the morning")][:1], [])
+        self.assertIn("drink tea", scan.find_noted(lib, "what do I drink in the morning")[0]["line"])
+
+
 class OnboardingTests(Base):
     def test_questions_complete_and_bilingual(self):
         data = onboard.load_questions()
@@ -506,6 +528,42 @@ class CliTests(Base):
         self.cli("next", "--library", str(self.root))
         for rel, data in files.items():
             self.assertEqual((self.root / rel).read_bytes(), data, rel)
+
+    def test_parallel_commands_do_not_lose_answers(self):
+        launcher = str(Path(__file__).resolve().parent.parent / "brainlib.py")
+        procs = [
+            subprocess.Popen(
+                [sys.executable, launcher, "onboard", "answer", "Q%d" % n, "a", "--library", str(self.root)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            for n in range(1, 7)
+        ]
+        self.assertEqual([p.wait(timeout=60) for p in procs], [0] * 6)
+        answers = onboard.profile(self.lib())["answers"]
+        self.assertEqual(sorted(answers), ["Q%d" % n for n in range(1, 7)])
+
+    def test_command_lock_reenters_waits_and_clears_stale_locks(self):
+        home = self.tmp / "home"
+        lock = home / "command.lock"
+        with command_lock(home):
+            with command_lock(home, wait=0):
+                self.assertTrue(lock.exists())
+        self.assertFalse(lock.exists())
+        lock.write_text("%d %f\n" % (os.getpid(), time.time()), encoding="ascii")
+        with self.assertRaises(BrainError):
+            with command_lock(home, wait=0.2):
+                pass
+        if os.name != "nt":
+            gone = subprocess.Popen([sys.executable, "-c", "pass"])
+            gone.wait()
+            lock.write_text("%d %f\n" % (gone.pid, time.time()), encoding="ascii")
+            with command_lock(home, wait=0.2):
+                pass
+        lock.write_text("%d %f\n" % (os.getpid(), time.time() - 3600), encoding="ascii")
+        with command_lock(home, wait=0.2):
+            pass
+        self.assertFalse(lock.exists())
 
 
 class McpTests(Base):

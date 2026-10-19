@@ -38,6 +38,7 @@ from .util import (
     EXIT_PRIVACY,
     EXIT_USAGE,
     BrainError,
+    command_lock,
     rel_posix,
     safe_resolve,
     slug,
@@ -1064,7 +1065,10 @@ def main(argv=None):
         print("\nNot sure where to start? Run: brainlib next")
         return EXIT_OK
     try:
-        return args.func(args) or EXIT_OK
+        if args.command == "mcp":  # long-running; each tool call takes the lock itself
+            return args.func(args) or EXIT_OK
+        with command_lock(config.brainlib_home()):
+            return args.func(args) or EXIT_OK
     except BrainError as e:
         if getattr(args, "json", False):
             print_json({"error": e.message, "fix": e.fix, "code": e.code}, ensure_ascii=False)
