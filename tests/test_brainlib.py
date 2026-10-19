@@ -543,7 +543,7 @@ class ConnectTests(Base):
         self.assertEqual(s["key"], "all-clear")
         self.assertIn("1 suggested change(s) wait", s["next"])
         self.assertIn("--target journal/%s.md" % today().isoformat(), s["rules"])
-        self.assertIn("propose only to fix or remove", s["rules"])
+        self.assertIn("never for something brainlib refused to save", s["rules"])
         code, out = self.cli("note", "I am allergic to peanuts", "--said", "--private", "--library", str(self.root))
         self.assertEqual(code, 3, out)
         self.assertIn("NOT saved", out)

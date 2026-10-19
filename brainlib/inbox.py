@@ -157,8 +157,10 @@ def add(
         if private_handling == "exclude":
             raise BrainError(
                 "Sensitive things are kept out of the library (onboarding Q7), so this was NOT saved.",
-                fix="Do not save it anywhere else either. Tell the user it was not saved because it is sensitive; "
-                "if they want sensitive things kept, ask them onboarding Q7 again.",
+                fix="Do not save it anywhere else, and do not put it into a note with propose either. Tell the user it "
+                "was not saved because it is sensitive. If the user says this one is fine to keep, run the same command "
+                "with --not-sensitive instead of --private. If they want sensitive things kept in general, ask them "
+                "onboarding Q7 again.",
                 code=EXIT_PRIVACY,
             )
         if vault.is_initialized(lib) and vault.age_bin():
@@ -171,8 +173,9 @@ def add(
             raise BrainError(
                 "This item is private, and the vault is not set up, so it was NOT saved.",
                 fix=(
-                    "Tell the user: 'I didn't save that because it's private. If you want me to keep private "
-                    "things, please run `brainlib vault init` yourself in a terminal (it asks you for a passphrase).'"
+                    "Do not save it any other way (not with propose either). Tell the user: 'I didn't save that "
+                    "because it's private. If you want me to keep private things, please run `brainlib vault init` "
+                    "yourself in a terminal (it asks you for a passphrase).'"
                 ),
                 code=EXIT_PRIVACY,
             )

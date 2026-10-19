@@ -742,7 +742,7 @@ def _refuse_new_source_labels(lib, target, content):
         raise BrainError(
             "The text has a source label such as [said ...] that is not in %s yet. Only brainlib note adds these labels." % target,
             fix='For something the user told you, run: brainlib note "<their exact words>" --said --target %s. '
-            "Use propose only to fix or remove what is already in a note." % target,
+            "Use propose only to correct or remove what a note already says." % target,
             code=EXIT_USAGE,
         )
 

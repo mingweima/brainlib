@@ -319,8 +319,8 @@ def daily_rules(lib, settings):
             if journal else ""
         )
         + "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
-        "What the user tells you always goes through brainlib note; use brainlib propose only to fix or remove "
-        "something already in a note.\n"
+        "What the user tells you always goes through brainlib note. Use brainlib propose only to correct or remove "
+        "what a note already says, never to add what the user just told you, and never for something brainlib refused to save.\n"
         "Never edit note files directly, never open the vault, never store passwords."
     )
 
@@ -330,9 +330,10 @@ def _sensitive_line(lib, settings):
     if not names:
         return ""
     line = (
-        "The user marked these topics as sensitive (onboarding Q6): %s. A note about one of them gets --private "
-        "(and never goes through propose); any other note gets --not-sensitive. brainlib then handles private "
-        "things the way the user chose (Q7).\n" % "; ".join(names)
+        "The user marked these topics as sensitive (onboarding Q6): %s. A note about one of them gets --private, "
+        "and never goes into a note any other way (not through propose either); any other note gets --not-sensitive. "
+        "If you are not sure whether something counts, ask the user. brainlib then handles private things the way "
+        "the user chose (Q7).\n" % "; ".join(names)
     )
     if settings.get("private_handling") == "ask_first":
         line += "Before reading or using anything about these topics, ask the user first (onboarding Q7).\n"
