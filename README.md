@@ -10,7 +10,10 @@ brainlib 做的事情就是在你自己电脑上 maintain 一个「大脑库」�
 
 安装只用在 Cursor、Claude Code、Codex 之类里对 agent 说「请读 https://github.com/mingweima/brainlib 的 AGENTS.md，帮我装好 brainlib」。之后你每开一个新的 agent 对话，都让它先去看 brainlib 路径的东西学习就行。
 
-只在 Mac 和 Linux 上测过，网页版和手机上的 AI 暂时用不了。
+> [!IMPORTANT]
+> **只能接能操作你电脑的 AI。** brainlib 要在你的电脑上读写笔记、运行命令，所以要接 Cursor、Claude Code、Codex 这类能访问你本机的 agent。只在网页或手机里聊天的 AI，比如网页版的 ChatGPT、豆包、Kimi，碰不到你的电脑，接不上，这是设计如此，不是 bug。云上的 agent 默认也接不上，除非大脑库放在同步盘里，而且那个 agent 真能读写这个文件夹、能在它那台机器上运行 brainlib 命令。
+
+只在 Mac 和 Linux 上实际装过。
 
 ## 装好以后怎么转
 
@@ -81,7 +84,7 @@ Windows 上每次改动都会自动跑一遍测试，但还没有人实际装过
 
 **要花钱吗？上班能用吗？** brainlib 不收钱，你用的 AI 工具照它们自己的价格收费。你自己用都免费，在自己的工作里用也算，比如在公司电脑上管自己的笔记。把它部署给别人用、做进产品或者拿来提供服务，要先找我拿授权。
 
-**我只用网页版或手机上的 ChatGPT、豆包、Kimi，能用吗？** 暂时不行，brainlib 要在你的电脑上运行命令。Claude 桌面版可以通过 MCP（AI 工具调用外部程序的一种标准接口）接上，见 [docs/mcp.md](docs/mcp.md)。
+**我只用网页版或手机上的 ChatGPT、豆包、Kimi，能用吗？** 接不上，这是设计如此。brainlib 要在你的电脑上读写文件、运行命令，网页和手机上的 AI 做不到。Claude 桌面版可以通过 MCP（AI 工具调用外部程序的一种标准接口）接上，见 [docs/mcp.md](docs/mcp.md)。
 
 **每次都先读大脑库，会不会变慢、多费额度？** 每次只读几页核心页，别的用到时再查。库再大，每次读的也就是这几页，加上查到的几篇。
 

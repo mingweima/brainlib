@@ -10,7 +10,10 @@ brainlib maintains a "brain library" folder on your own computer. Any local AI a
 
 To install, tell the agent in Cursor, Claude Code, Codex or a similar tool: "Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me." After that, whenever you start a new agent conversation, have it read what's in the brainlib folder first.
 
-Only tested on Mac and Linux so far. AIs in a web page or a phone app can't use it yet.
+> [!IMPORTANT]
+> **It only works with an AI that can operate your computer.** brainlib reads and writes your notes and runs commands on your computer, so it needs an agent with access to your machine, such as Cursor, Claude Code or Codex. AIs that only chat in a browser or a phone app, such as ChatGPT, Doubao or Kimi on the web, can't reach your computer and can't connect. That is by design, not a bug. Cloud agents can't connect by default either, unless the brain library is in a sync folder and that agent can really read and write the folder and run brainlib commands on the machine it runs on.
+
+Only installed for real on Mac and Linux so far.
 
 ## How it works once installed
 
@@ -81,7 +84,7 @@ Your starting level depends on how you answer the setup questions, and you can c
 
 **Does it cost anything? Can I use it at work?** brainlib is free; the AI tools you use charge their own prices. Using it yourself is free, and that includes your own work, such as managing your own notes on a work computer. Deploying it for other people, building it into a product or using it to provide a service needs a license from me first.
 
-**I only use ChatGPT, Doubao or Kimi in a browser or on my phone. Can I use it?** Not yet, because brainlib needs to run commands on your computer. Claude Desktop can connect through MCP (a standard way for AI tools to call outside programs); see [docs/mcp.md](docs/mcp.md).
+**I only use ChatGPT, Doubao or Kimi in a browser or on my phone. Can I use it?** No, and that is by design: brainlib has to read and write files and run commands on your computer, which an AI in a browser or a phone app can't do. Claude Desktop can connect through MCP (a standard way for AI tools to call outside programs); see [docs/mcp.md](docs/mcp.md).
 
 **Reading the brain library at the start of every conversation, won't that be slow or use up my quota?** It reads only a few core pages each time and looks up the rest when needed. However big the library gets, each conversation reads those few pages plus whatever it finds.
 
