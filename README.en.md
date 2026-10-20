@@ -10,7 +10,7 @@ brainlib maintains a "brain library" folder on your own computer. Any local AI a
 
 To install, tell the agent in Cursor, Claude Code, Codex or a similar tool: "Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me." After that, whenever you start a new agent conversation, have it read what's in the brainlib folder first.
 
-Only tested on a Mac so far. AIs in a web page or a phone app can't use it yet.
+Only tested on Mac and Linux so far. AIs in a web page or a phone app can't use it yet.
 
 ## How it works once installed
 
@@ -41,7 +41,7 @@ You need Python 3.9 or newer. If you don't have it, the AI asks you first and th
 
 Before starting, the AI takes a 4-question self-check that the program grades. If it fails, it tells you so and suggests a stronger model, or read-only lookups for now.
 
-Windows and Linux should work too, but haven't been tested yet. If you run into problems, please open an issue on GitHub, in English or Chinese.
+On Windows, the automated tests run on every change, but nobody has installed it there for real yet. If you run into problems, please open an issue on GitHub, in English or Chinese.
 
 ## Five levels
 

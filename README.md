@@ -10,7 +10,7 @@ brainlib 做的事情就是在你自己电脑上 maintain 一个「大脑库」�
 
 安装只用在 Cursor、Claude Code、Codex 之类里对 agent 说「请读 https://github.com/mingweima/brainlib 的 AGENTS.md，帮我装好 brainlib」。之后你每开一个新的 agent 对话，都让它先去看 brainlib 路径的东西学习就行。
 
-只在 Mac 上测过，网页版和手机上的 AI 暂时用不了。
+只在 Mac 和 Linux 上测过，网页版和手机上的 AI 暂时用不了。
 
 ## 装好以后怎么转
 
@@ -41,7 +41,7 @@ maintainer 会找出过了复查日期的页、断掉的链接、误存进笔记
 
 AI 开始前会先做 4 道小题的自测，由程序判分。没通过的话，它会照实告诉你，建议换个更强的模型，或者先只做只读查询。
 
-Windows 和 Linux 按理也能用，只是还没实测。遇到问题请在 GitHub 上提 issue，中文英文都行。
+Windows 上每次改动都会自动跑一遍测试，但还没有人实际装过。遇到问题请在 GitHub 上提 issue，中文英文都行。
 
 ## 五个档位
 

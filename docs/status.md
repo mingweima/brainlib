@@ -14,11 +14,11 @@
 - 隐私方面，私密笔记不出现在任何输出里；拒存密码、密钥、银行卡号、身份证号，笔记里原有的这类内容拿给 AI 时遮住；age 保险箱；发布扫描和放行清单；git 钩子。
 - AI 同时发出好几条 brainlib 命令时，它们会排队执行，不会互相覆盖记录。
 - MCP 服务器（stdio）。
-- Python 3.9 及以上；零依赖。按 macOS、Windows、Linux 三个系统写的，目前只在 macOS 上实测过。
+- Python 3.9 及以上；零依赖。GitHub 上每次提交都会在 macOS、Windows、Linux 上自动跑自检、单元测试和隐私扫描；实际装起来用，macOS 和 Linux 上试过，Windows 上还没有。
 
 ## 还没有的 / Not yet
 
-- Windows 和 Linux 上的实测，以及在三个系统上自动跑测试。
+- 在 Windows 上实际装起来用一遍。
 - 隐私的硬的一层，比如钥匙要本人在场才能用、出口门禁、保险箱文件名加密，见 [roadmap.md](roadmap.md)。v0.1 的保险箱靠口令，是可选的。
 - 语义搜索（v0.1 是关键词和中文双字匹配）。
 - 规则分类只看字词重合，归类比较粗，没把握时放进 `inbox-unsorted.md` 等用户整理。AI 记录时用 `--target` 指明该放哪篇，会准得多。
