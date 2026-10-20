@@ -49,7 +49,7 @@ def make_id():
 
 class Base(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="brainlib-test-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="brainlib-test-")).resolve()  # Windows may hand out 8.3 short names; brainlib writes the long form
         self._env = {k: os.environ.get(k) for k in ("BRAINLIB_HOME", "BRAINLIB_PREFIX", "BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_PRIVATE_WORDS")}
         os.environ["BRAINLIB_HOME"] = str(self.tmp / "home")
         os.environ["BRAINLIB_PREFIX"] = "brainlib"
@@ -69,7 +69,7 @@ class Base(unittest.TestCase):
     def write(self, rel, text):
         p = self.root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
+        p.write_bytes(text.encode("utf-8"))  # write_text would turn \r\n into \r\r\n on Windows
         return p
 
     def lib(self, cfg=None):
