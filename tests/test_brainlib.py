@@ -662,7 +662,7 @@ class ConnectTests(Base):
         self.assertIn("ALREADY SAVED", out)
         s = nextstep.compute(lib)
         self.assertEqual(s["key"], "classify")
-        self.assertIn("sensitive (onboarding Q6): Health.", s["rules"])
+        self.assertIn("sensitive (onboarding Q6): 健康 (Health).", s["rules"])
         self.assertNotIn("--not-sensitive", s["rules"])
         self.assertIn("ALWAYS, whatever the user asks", nextstep.render(s))
         code, out = self.cli("classify", "--library", str(self.root))
@@ -700,6 +700,7 @@ class ConnectTests(Base):
         line = nextstep._sensitive_line(lib, onboard.settings(lib))
         self.assertIn('Health; "my divorce".', line)
         self.assertIn("ask the user first", line)
+        self.assertIn("健康 (Health)", nextstep._sensitive_line(lib, onboard.settings(lib), "zh"))
         onboard.answer(lib, "Q7", "d")
         self.assertEqual(nextstep._sensitive_line(lib, onboard.settings(lib)), "")
 
@@ -715,7 +716,9 @@ class AgentCheckTests(Base):
         for lang, has_zh in ((None, True), ("en", False)):
             if lang:
                 self.cli("lang", lang)
-            s = agentcheck.start("agent/b")
+            s = agentcheck.start("agent/b", lang=lang)
+            self.assertEqual("银行卡" in agentcheck.render(s), has_zh)
+            self.assertIn("bank card", agentcheck.render(s))
             for i, a in enumerate(self._answers(s), 1):
                 agentcheck.answer(i, a)
             say = agentcheck.finish(model="test-model")[1]

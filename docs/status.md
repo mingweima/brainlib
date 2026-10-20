@@ -52,8 +52,8 @@
   The daily rules now say that each line starts with when it was said and the newest one counts, to use `--replaces` for a change of mind, and to note decisions and preferences near the end of a conversation, skipping small talk. Chinese users also get a writing guide, `skills/brainlib-writing/SKILL.md`, which the daily rules and the library's `AGENTS.md` point to.
 - MCP 的 `kb_note` 和 `kb_index` 支持新参数，新工具 `kb_log`。
   MCP: `kb_note` and `kb_index` take the new parameters; there is a new `kb_log` tool.
-- 几处小修。在 Windows 上同时跑几条 brainlib 命令，偶尔会有一条白等 60 秒再报错，现在不会了；自测没过时 `agent-check finish` 退出码是 1；终端里逐条审阅有中文提示，按 Ctrl-D 不再报错；`connect --remove` 删完以后文件空了就删掉文件（有备份）；开场题结束语写对了每题隔多久再确认。
-  Small fixes: on Windows, running several brainlib commands at once no longer leaves one of them waiting 60 seconds before it fails; `agent-check finish` exits with 1 when the check fails; interactive review speaks Chinese and no longer crashes on Ctrl-D; `connect --remove` deletes the file when nothing else is left in it (a backup is kept); the onboarding outro gives the right recheck intervals.
+- 几处小修。在 Windows 上同时跑几条 brainlib 命令，偶尔会有一条白等 60 秒再报错，现在不会了；自测没过时 `agent-check finish` 退出码是 1；终端里逐条审阅有中文提示，按 Ctrl-D 不再报错；`connect --remove` 删完以后文件空了就删掉文件（有备份）；开场题结束语写对了每题隔多久再确认；还没选语言时，`agent-check` 的题中英文都出；中文库的日常规则里，敏感话题带中文名；Claude Code 权限模板的允许规则带上了引号，和 `RUN:` 行对得上。
+  Small fixes: on Windows, running several brainlib commands at once no longer leaves one of them waiting 60 seconds before it fails; `agent-check finish` exits with 1 when the check fails; interactive review speaks Chinese and no longer crashes on Ctrl-D; `connect --remove` deletes the file when nothing else is left in it (a backup is kept); the onboarding outro gives the right recheck intervals; before a language is chosen, `agent-check` shows its tasks in both languages; in Chinese libraries the daily rules name sensitive topics in Chinese too; the Claude Code permission template's allow rule now has the quotes that `RUN:` lines use.
 - 旧库不用迁移，旧的来源标记照样认。
   Existing libraries need no migration; old source labels still read.
 

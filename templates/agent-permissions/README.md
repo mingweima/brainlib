@@ -15,7 +15,7 @@ the AI tool itself means a confused agent still cannot reach what it should not.
 
 | 工具 Tool | 做法 What to do |
 |---|---|
-| Claude Code | 把 `claude-code.settings.json` 合并进库文件夹的 `.claude/settings.json`，把里面的 `/ABSOLUTE/PATH/TO/brainlib` 换成 brainlib 程序文件夹的实际路径。Merge into `.claude/settings.json` in the library folder and replace the placeholder path. |
+| Claude Code | 把 `claude-code.settings.json` 合并进库文件夹的 `.claude/settings.json`，把里面的 `/ABSOLUTE/PATH/TO/brainlib` 换成 brainlib 程序文件夹的实际路径。允许规则要和命令的开头一字不差：brainlib 输出的 `RUN:` 行开头是什么（包括引号和 Python 的写法），规则里就写什么。这个文件只在用 Claude Code 打开库文件夹时生效；在别的文件夹里也要用，就把这几条放进用户目录的 `~/.claude/settings.json`。Merge into `.claude/settings.json` in the library folder and replace the placeholder path. An allow rule must match the start of the command exactly, so copy it from the start of a `RUN:` line brainlib prints, quotes and Python name included. This file only applies when Claude Code opens the library folder; to use brainlib from other folders too, put the lines in `~/.claude/settings.json`. |
 | Cursor | 把 `cursorignore.txt` 的内容追加到库文件夹的 `.cursorignore`。Append to `.cursorignore` in the library folder. |
 | 其他 Others | 照上面三条目标，在工具的权限或沙盒设置里配置；做不到的部分，由 brainlib 自身的检查和 AGENTS.md 的规则兜底。Configure the three goals in the tool's permission or sandbox settings; whatever it cannot express is still covered by brainlib's own checks and the AGENTS.md rules. |
 

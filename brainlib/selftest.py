@@ -152,7 +152,7 @@ def run(verbose=False):
         r.check("after the user's yes only the newer statement stays", "回复别超过五段" in me and "] 回复别超过三段" not in me, me[-300:])
         code, out = r.cli("index", "--category", "关于我", *lib)
         r.check("records can be filtered by category", code == 0 and "回复别超过五段" in out, out)
-        code, out = r.cli("log", "--days", "1", *lib)
+        code, out = r.cli("log", "--days", "2", *lib)
         r.check("the log shows records by the day they were said", code == 0 and "回复别超过五段" in out, out)
         code, out = r.cli("find", "段", *lib)
         r.check("a single Chinese character finds notes", code == 0 and "me.md" in out, out)

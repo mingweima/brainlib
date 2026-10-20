@@ -314,7 +314,7 @@ def daily_rules(lib, settings):
     lang = records.lib_lang(lib)
     cat = CATEGORY_WORDS["zh" if lang == "zh" else "en"]
     journal = records.journal_dir(lib)
-    sensitive = _sensitive_line(lib, settings)
+    sensitive = _sensitive_line(lib, settings, lang)
     rules = (
         "Once per conversation, before your first answer: run brainlib index and read every core page (L0) it lists "
         "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
@@ -343,8 +343,8 @@ def daily_rules(lib, settings):
     return rules
 
 
-def _sensitive_line(lib, settings):
-    names = onboard.sensitive_topic_names(lib, settings)
+def _sensitive_line(lib, settings, lang=None):
+    names = onboard.sensitive_topic_names(lib, settings, lang)
     if not names:
         return ""
     line = (

@@ -12,8 +12,8 @@ English version: [AGENTS.en.md](AGENTS.en.md)
    如果你根本没法运行命令，停下来，原样告诉用户：
    “我没法在你的电脑上运行命令，所以装不了也管不了大脑库。请换一个能运行终端命令的 AI 助手
    （例如 Cursor、Claude Code、Codex、Trae），再让它读这个文件。”
-2. 能运行命令的话，装好后先做自测：运行 `brainlib agent-check`，照它的 4 道题做完，
-   最后运行 `brainlib agent-check finish --model "你的模型名"`。
+2. 能运行命令的话，先照第 1 步让 brainlib 能运行，再做自测：运行 `brainlib agent-check`，照它的 4 道题做完，
+   最后运行 `brainlib agent-check finish --model "你的模型名"`。第 2 步的 `brainlib next` 也会先带你做这一步。
 3. 自测没通过，`brainlib next` 会给你一段话，原样转告用户，不要隐瞒。
 4. 即使通过了，如果你是小模型或快速模型（名字里有 mini、flash、lite、haiku、nano、7B、8B 之类的单独一个词，Gemini 里的 mini 不算），
    也要告诉用户：复杂的整理你可能做错，所以每一处改动都会先请他确认。

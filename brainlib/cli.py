@@ -378,7 +378,8 @@ def cmd_agent_check(args):
     actor = _actor(args)
     action = args.action or "start"
     if action == "start":
-        s = agentcheck.start(actor, lang=_lang(args), model=args.model)
+        chosen = getattr(args, "lang", None) or os.environ.get("BRAINLIB_LANG") or config.global_state().get("lang")
+        s = agentcheck.start(actor, lang=chosen, model=args.model)
         print(agentcheck.render(s))
         return EXIT_OK
     if action == "data":

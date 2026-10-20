@@ -12,8 +12,8 @@ The user does not need to know Python or the command line: you run all commands,
    If you cannot run commands at all, stop and tell the user word for word:
    "I cannot run commands on your computer, so I cannot install or manage your brain library. Please switch to an AI assistant that can run terminal commands
    (such as Cursor, Claude Code, Codex, or Trae) and ask it to read this file."
-2. If you can run commands, run the self-test first after setup: run `brainlib agent-check`, complete its 4 questions as instructed,
-   and finally run `brainlib agent-check finish --model "your model name"`.
+2. If you can run commands, first get brainlib running (step 1), then take the self-test: run `brainlib agent-check`, complete its 4 questions as instructed,
+   and finally run `brainlib agent-check finish --model "your model name"`. `brainlib next` in step 2 also starts with this.
 3. If you do not pass the self-test, `brainlib next` will give you a message. Relay it to the user word for word and do not hide anything.
 4. Even if you pass, if you are a small or fast model (with a separate word like mini, flash, lite, haiku, nano, 7B, or 8B in your name; the "mini" inside "Gemini" does not count),
    tell the user that you might make mistakes on complex organization tasks, so you will ask them to confirm every change first.
