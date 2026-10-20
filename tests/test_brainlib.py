@@ -688,8 +688,11 @@ class UpdateTests(Base):
 
     def test_each_copy_of_the_program_remembers_its_own_version(self):
         self.cli("init", str(self.root))
+        another = self.tmp / "another copy"
+        another.mkdir()
+        (another / "brainlib.py").write_text("", encoding="utf-8")
         gs = config.global_state()
-        gs["update"]["seen"]["/another/copy"] = "99.0.0"
+        gs["update"]["seen"][str(another)] = "99.0.0"
         config.save_global_state(gs)
         out = self.cli("next", "--library", str(self.root))[1]
         self.assertNotIn("RESTART", out)
@@ -717,9 +720,28 @@ class UpdateTests(Base):
         os.environ.pop("BRAINLIB_NO_UPDATE_CHECK")
         self.feed("v99.0.0")
         self.assertNotIn("is out", self.cli("next", "--library", str(self.root))[1])
+        self.assertNotIn("update", json.loads(self.cli("next", "--json", "--library", str(self.root))[1]))
         self.feed("v99.0.1")
         self.age("checked_at")
         self.assertIn("brainlib 99.0.1 is out", self.cli("next", "--library", str(self.root))[1])
+        self.assertEqual(json.loads(self.cli("next", "--json", "--library", str(self.root))[1])["update"]["latest"], "99.0.1")
+
+    def test_a_copy_that_replaces_a_deleted_one_takes_over_from_its_version(self):
+        self.cli("init", str(self.root))
+        gs = config.global_state()
+        gs["update"]["seen"] = {str(self.tmp / "deleted copy"): "0.1.0"}
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertIn("UPDATED: brainlib is now %s (it was 0.1.0)" % update.__version__, out)
+        self.assertIn("REBUILT: the index of 1 library", out)
+        self.assertEqual(list(config.global_state()["update"]["seen"]), [str(update.PROGRAM_DIR)])
+        gs = config.global_state()
+        gs["update"]["seen"] = {str(self.tmp / "deleted copy"): "99.0.0"}
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertNotIn("WENT BACK", out)
+        self.assertIn("self-check", out)
+        self.assertIsNone(config.global_state()["update"].get("skip"))
 
     def test_agents_files_name_a_command_a_fresh_terminal_can_run(self):
         cli._python()
@@ -894,15 +916,15 @@ class ConnectTests(Base):
         self.assertEqual(tool.read_text(encoding="utf-8"), before)
         self.assertEqual((self.root / "AGENTS.md").read_text(encoding="utf-8"), agents)
         self.assertEqual(update.seen_version(), update.__version__)
+        self.assertIn("self-check", self.cli("next", "--library", str(self.root))[1])
         shutil.rmtree(str(self.tmp / "other copy"))
-        gs = config.global_state()
-        del gs["update"]["seen"][str(update.PROGRAM_DIR)]
-        config.save_global_state(gs)
         out = self.cli("next", "--library", str(self.root))[1]
         self.assertIn("REFRESHED: %s now runs this copy" % tool, out)
         self.assertIn("self-check", out)
         self.assertIn(cli.standalone_cmd(), tool.read_text(encoding="utf-8"))
         self.assertEqual((self.root / "AGENTS.md").read_text(encoding="utf-8"), cli.agents_text(self.root, "en"))
+        self.assertEqual(list(config.global_state()["update"]["seen"]), [str(update.PROGRAM_DIR)])
+        self.assertNotIn("REFRESHED", self.cli("next", "--library", str(self.root))[1])
 
     def test_a_part_that_cannot_be_refreshed_is_reported_and_not_retried(self):
         self.cli("init", str(self.root))

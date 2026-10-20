@@ -15,8 +15,9 @@ brainlib lines it wrote into the user's tool instruction files, and rewrites a l
 an older brainlib wrote and nobody edited since. If the program changed some other way, the first
 `brainlib next` that runs the new code does the same. Each copy of the program remembers its own
 version and only rewrites files that run it, or run a copy that is gone, so two copies sharing
-~/.brainlib leave each other alone. After going back to an older version, brainlib does not update
-itself to the version the user left.
+~/.brainlib leave each other alone; when one is deleted, the next copy to run takes over the files
+that named it. After going back to an older version, brainlib does not update itself to the version
+the user left.
 
 `brainlib update --off` stops the checks; so does the environment variable BRAINLIB_NO_UPDATE_CHECK=1.
 Adapting after a manual update still happens; it never goes online.
@@ -114,6 +115,18 @@ def remember_version():
         _save(st)
 
 
+def _still_there(program):
+    p = Path(program)
+    try:
+        return (p / "brainlib.py").is_file() or (p / "brainlib" / "__init__.py").is_file()
+    except OSError:
+        return True
+
+
+def _newest(versions):
+    return max((v for v in versions if parse_version(v)), key=parse_version, default=None)
+
+
 # --- asking GitHub ----------------------------------------------------------
 
 def _no_prompt_env():
@@ -153,7 +166,8 @@ def _latest_tag_by_git(timeout):
     try:
         r = subprocess.run(
             [git, "ls-remote", "--tags", "--refs", GIT_URL],
-            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout, env=_no_prompt_env(),
+            stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=timeout, env=_no_prompt_env(),
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -245,7 +259,8 @@ def _git(program, *args, timeout=60):
     try:
         return subprocess.run(
             ["git", "-C", str(program)] + list(args),
-            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout, env=_no_prompt_env(),
+            stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=timeout, env=_no_prompt_env(),
         )
     except (OSError, subprocess.SubprocessError) as e:
         return subprocess.CompletedProcess(args, 1, "", str(e))
@@ -624,24 +639,32 @@ def render_adapt(report, lang):
 def on_next(lang):
     """What `brainlib next` has to say about updates, as {"instead": text to show instead of the step,
     "offer": a newer release that becomes the step, "notices": lines to show above the step, "info": what
-    check() found}. A release becomes the step only the first time; after that it is a notice at most once
-    a day, so a failing update never keeps the agent from its work. Never raises."""
+    check() found about a newer release the user has not gone back from}. A release becomes the step only
+    the first time; after that it is a notice at most once a day, so a failing update never keeps the agent
+    from its work. Never raises."""
     out = {"instead": None, "offer": None, "notices": [], "info": None}
     try:
         st = _state()
-        seen, disk = seen_version(st), installed_version()
+        disk = installed_version()
+        copies = dict(st.get("seen") or {})
+        seen = copies.pop(str(PROGRAM_DIR), None)
+        gone = [d for d in copies if not _still_there(d)]
+        others = [d for d in copies if d not in gone]
+        if seen is None and gone and not others:
+            last = _newest(copies[d] for d in gone)
+            seen = last if newer(__version__, last) else __version__  # this copy stands in for the deleted ones
         if newer(disk, __version__):
             out["notices"].append(
                 "RESTART: brainlib %s is installed, but this process still runs %s. Ask the user to restart the app "
                 "that runs brainlib (Claude Desktop, for example)." % (disk, __version__)
             )
-        elif seen != __version__:
-            other_copies = [d for d in (st.get("seen") or {}) if d != str(PROGRAM_DIR)]
+        elif seen != __version__ or gone:
+            st["seen"] = {d: v for d, v in copies.items() if d not in gone}
             if newer(seen, __version__):
                 st["skip"] = seen
             _set_seen(st, __version__)
             _save(st)  # before adapting, so a part that keeps failing is not retried on every run
-            if seen is None and other_copies:
+            if seen == __version__ or (seen is None and others):
                 r = adapt(rebuild=False)
                 out["notices"] += [
                     "REFRESHED: %s now runs this copy of brainlib, because the copy it named is gone (the old file was backed up)." % f
@@ -654,10 +677,11 @@ def on_next(lang):
     except Exception:  # noqa: BLE001 - an update problem must never block the daily routine
         pass
     try:
-        info = out["info"] = check()
+        info = check()
         st = _state()
         skip = st.get("skip")
         if info and info["available"] and not (skip and not newer(info["latest"], skip)):
+            out["info"] = info
             if st.get("offered") != info["tag"]:
                 st.update(offered=info["tag"], noted_at=now_iso())
                 _save(st)

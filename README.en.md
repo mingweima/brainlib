@@ -220,7 +220,7 @@ flowchart TD
     H --> I["The AI tells you what changed"]
 ```
 
-To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`; either one only stops the check with GitHub. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs. After going back to an older version from a backup, it won't update itself to the version you left, but newer releases still install. With two copies of `brainlib` on one computer, each changes only the lines that run it or run a copy that has been deleted.
+To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`; either one only stops the check with GitHub. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs. After going back to an older version from a backup, it won't update itself to the version you left, but newer releases still install. With two copies of `brainlib` on one computer, each changes only the lines that run it or run a copy that has been deleted; after you delete one, the other takes over its lines the next time it runs.
 
 ### Exit codes
 
