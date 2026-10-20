@@ -31,6 +31,7 @@ from . import (
     privacy,
     proposals,
     provenance,
+    records,
     scan,
     vault,
 )
@@ -55,7 +56,7 @@ MAX_READ_BYTES = 200_000
 # --- helpers ----------------------------------------------------------------
 
 SUBCOMMANDS = (
-    "next", "init", "adopt", "scan", "index", "find", "read", "health", "lint", "note", "inbox", "classify",
+    "next", "init", "adopt", "scan", "index", "log", "find", "read", "health", "lint", "note", "inbox", "classify",
     "propose", "review", "apply", "reject", "defer", "undo", "onboard", "privacy", "hooks", "vault", "mcp",
     "selftest", "version", "lang", "doctor", "agent-check", "connect",
 )
@@ -191,6 +192,7 @@ def _write_agents_file(root):
     name = "AGENTS.zh.md" if lang == "zh" and (TEMPLATES / "AGENTS.zh.md").is_file() else "AGENTS.md"
     text = (TEMPLATES / name).read_text(encoding="utf-8")
     text = text.replace("{BRAINLIB_CMD}", brainlib_cmd()).replace("{LIBRARY}", str(Path(root).resolve()))
+    text = text.replace("{WRITING_SKILL}", str(nextstep.WRITING_SKILL))
     (Path(root) / "AGENTS.md").write_text(text, encoding="utf-8")
 
 
@@ -340,6 +342,8 @@ def cmd_connect(args):
         r = connect.remove(args.tool) if args.remove else connect.write(lib, args.tool, cmd, lang)
         if r["changed"]:
             text = "%s %s" % ("REMOVED the brainlib lines from" if args.remove else "ADDED the brainlib lines to", r["file"])
+            if r.get("deleted"):
+                text += "\n  Nothing else was in it, so the empty file was deleted."
             if r["backup"]:
                 text += "\n  The old file was backed up to %s" % r["backup"]
         else:
@@ -395,7 +399,7 @@ def cmd_agent_check(args):
         else:
             lines.append("THEN: run `brainlib next`.")
         _emit(args, {"result": result, "say": say}, "\n".join(lines))
-        return EXIT_OK
+        return EXIT_OK if result["passed"] else EXIT_FINDINGS
     if action == "ack":
         agentcheck.acknowledge(actor)
         print("OK: noted that the user was told.\nTHEN: run `brainlib next`.")
@@ -427,20 +431,143 @@ NOTED_HEAD = (
 )
 
 
+RECORDS_HEAD = (
+    "Each line: when it was said, its level, the source label, the words, then category, importance and where it "
+    "is. Keep the source labels: only [said] and [judgment] are the user's own view. When two lines are about the "
+    "same thing, the one said last counts."
+)
+
+
+def _record_filters(args):
+    levels = []
+    for v in args.level or []:
+        levels.extend(x for x in re.split(r"[,\s]+", v) if x)
+    return {
+        "sort": args.sort or "time",
+        "category": args.category,
+        "importance": args.importance,
+        "since": args.since,
+        "until": args.until,
+        "levels": levels or None,
+        "privacy": args.privacy,
+    }
+
+
+def _hidden_line(hidden):
+    n = sum(hidden.values())
+    return ("%d private record(s) are never shown to agents." % n) if n else ""
+
+
+def _index_records(args, lib, lang):
+    filters = _record_filters(args)
+    recs, hidden = records.collect(lib)
+    rows = records.select(recs, **filters)
+    if records.normalize_privacy(args.privacy) not in (None, "normal"):
+        n = hidden.get(records.normalize_privacy(args.privacy), 0)
+        msg = "%d %s record(s). Private records are never shown to agents; only the user can read them." % (
+            n, records.privacy_label(records.normalize_privacy(args.privacy), "en"))
+        _emit(args, {"count": n, "records": [], "private_hidden": hidden}, msg)
+        return EXIT_OK
+    limit = None if args.all else max(1, args.limit)
+    shown = rows[:limit] if limit else rows
+    if args.json:
+        print_json({"count": len(rows), "records": shown, "private_hidden": hidden}, ensure_ascii=False, indent=2)
+        return EXIT_OK
+    if not rows:
+        print("No records match. Loosen the filters, or search with brainlib find \"<topic>\".")
+        return EXIT_OK
+    lines = ["%d record(s) match, sorted by %s (newest said first within it)." % (len(rows), filters["sort"]), RECORDS_HEAD]
+    lines.extend("- " + _short(records.render(r, lang), 400) for r in shown)
+    if len(rows) > len(shown):
+        lines.append("- (%d more; add --all to list them all)" % (len(rows) - len(shown)))
+    if _hidden_line(hidden):
+        lines.append(_hidden_line(hidden))
+    print("\n".join(lines))
+    return EXIT_OK
+
+
 def cmd_index(args):
     lib = _lib(args)
     index = scan.load_index(lib)
-    items = inbox.not_filed_for_agents(lib)
+    lang = records.lib_lang(lib)
+    filtered = any(
+        getattr(args, k) for k in ("sort", "category", "importance", "since", "until", "level", "privacy")
+    ) or args.all
+    if filtered:
+        return _index_records(args, lib, lang)
+    view = records.index_view(lib)
     if args.json:
-        print_json(dict(index, not_filed=[inbox.describe(it) for it in items[:20]]), ensure_ascii=False, indent=2)
+        items = inbox.not_filed_for_agents(lib)
+        print_json(
+            dict(index, not_filed=[inbox.describe(it, lang) for it in items[:20]], records=view),
+            ensure_ascii=False,
+            indent=2,
+        )
         return EXIT_OK
-    text = lib.out("llms.txt").read_text(encoding="utf-8").rstrip("\n")
-    if items:
-        text += "\n\n## Noted recently (newest first)\n%s\n" % NOTED_HEAD
-        text += "\n".join("- %s" % _short(inbox.describe(it), 300) for it in items[:10])
-        if len(items) > 10:
-            text += "\n- (%d more; search them with brainlib find \"<topic>\")" % (len(items) - 10)
-    print(text)
+    after_core, after_entry = [], []
+    if view["important"]:
+        after_core.append("## Important, not filed yet (L0)")
+        after_core.append(NOTED_HEAD)
+        after_core.extend("- " + _short(records.render(r, lang), 400) for r in view["important"])
+        if view["important_more"]:
+            after_core.append("- (%d more: brainlib index --importance high)" % view["important_more"])
+    if view["journal_days"]:
+        after_entry.append("## Journal, last %d days" % records.CAPS["journal_days"])
+        after_entry.extend("- %s: %d record(s)" % (path, n) for path, n in view["journal_days"])
+        after_entry.append("")
+    if view["recent"]:
+        after_entry.append("## Recent records (newest said first)")
+        after_entry.append(RECORDS_HEAD)
+        after_entry.extend("- " + _short(records.render(r, lang), 400) for r in view["recent"])
+        after_entry.append("")
+    if view["outdated"]:
+        after_entry.append("## Maybe out of date: same note, look-alike lines said at different times")
+        for o in view["outdated"]:
+            old, new = o["older"], o["newer"]
+            after_entry.append(
+                "- %s line %s (said %s) %r; line %s (said %s) %r counts." % (
+                    o["path"], old["line"], old["when"], _short(old["text"], 60),
+                    new["line"], new["when"], _short(new["text"], 60))
+            )
+        if view["outdated_more"]:
+            after_entry.append("- (%d more: brainlib health)" % view["outdated_more"])
+        after_entry.append("")
+    listed = len(view["important"]) + len(view["recent"])
+    more = "%d record(s) in all" % view["total"]
+    if view["total"] > listed:
+        more += ", %d not listed here" % (view["total"] - listed)
+    after_entry.append(
+        "More: %s. Filter with brainlib index --category <name> --since YYYY-MM-DD --sort importance, see a day "
+        "with brainlib log, or search everything (archive included) with brainlib find \"<topic>\"." % more
+    )
+    if _hidden_line(view["private_hidden"]):
+        after_entry.append(_hidden_line(view["private_hidden"]))
+    hidden_pages = index.get("private_hidden", 0)
+    print(scan.render_guide(lib, index["notes"], hidden_pages, index["generated_at"], after_core, after_entry).rstrip("\n"))
+    return EXIT_OK
+
+
+def cmd_log(args):
+    lib = _lib(args)
+    lang = records.lib_lang(lib)
+    days, hidden = records.day_view(lib, day=args.day, days=args.days)
+    if args.json:
+        print_json({"days": days, "private_hidden": hidden}, ensure_ascii=False, indent=2)
+        return EXIT_OK
+    if not any(d["records"] for d in days):
+        span = args.day or "the last %d day(s)" % args.days
+        print("No records for %s. Records appear here once something is noted with brainlib note." % span)
+        return EXIT_OK
+    lines = ["Records by the day they were said, earliest first within a day. The one said last counts."]
+    for d in days:
+        lines.append("")
+        lines.append("%s (%d)" % (d["day"], len(d["records"])))
+        for r in d["records"]:
+            lines.append("  " + _short(records.render(r, lang), 400))
+    if _hidden_line(hidden):
+        lines.append("")
+        lines.append(_hidden_line(hidden))
+    print("\n".join(lines))
     return EXIT_OK
 
 
@@ -582,6 +709,10 @@ def cmd_note(args):
         tags=args.tag,
         sensitivity="private" if args.private else "internal",
         private_handling=settings.get("private_handling", "exclude"),
+        category=args.category,
+        importance=args.importance,
+        privacy_level=args.privacy,
+        replaces=args.replaces,
     )
     if args.now:
         return _file_now(args, lib, dup or item["id"], args.target)
@@ -590,9 +721,9 @@ def cmd_note(args):
         return EXIT_OK
     shown = "(private: encrypted)" if item.get("encrypted_ref") else _short(item.get("text"), 120)
     msg = (
-        "SAVED to the inbox as %s [%s]: %s\n"
+        "SAVED to the inbox as %s [%s]: %s\n%s\n"
         "No note was changed. It becomes a suggested change when `brainlib classify` runs."
-        % (item["id"], provenance.label(item["provenance"]), shown)
+        % (item["id"], provenance.label(item["provenance"]), shown, _tags_line(lib, item))
     )
     target = (item.get("suggest") or {}).get("target")
     if target and _not_utf8(lib, target):
@@ -604,6 +735,20 @@ def cmd_note(args):
         msg += "\nIf the user asked for it to go in %s now, run the same command again with --now." % target
     _emit(args, {"saved": item["id"], "provenance": item["provenance"]}, msg)
     return EXIT_OK
+
+
+def _tags_line(lib, item):
+    t = records.item_tags(item, records.lib_lang(lib))
+    when = t["when"] or "?"
+    if t["estimated"]:
+        when += " (when it was noted; pass --said-at if the user said it earlier)"
+    bits = ["said at %s" % when]
+    bits.append("category %s" % (t["category"] or "(from the note it goes to)"))
+    bits.append("importance %s%s" % (t["importance"], " (default)" if t["importance_inferred"] else ""))
+    bits.append("privacy %s" % t["privacy"])
+    if item.get("replaces"):
+        bits.append("replaces the line with %r" % item["replaces"])
+    return "TAGS: " + "; ".join(bits)
 
 
 def _file_now(args, lib, item_id, target):
@@ -682,7 +827,12 @@ def cmd_classify(args):
         for p in s["proposals"]:
             lines.append("  - %s: %d item(s)%s" % (p["target"], p["items"], ("  [%s]" % p["id"]) if p.get("id") else ""))
         if s["duplicates"]:
-            lines.append("  %d item(s) were already in the notes and were skipped." % s["duplicates"])
+            lines.append(
+                "  %d item(s) were already in the notes, so the notes stay as they are; the journal gets the new time."
+                % s["duplicates"]
+            )
+        if s.get("logged"):
+            lines.append("  %d item(s) also go into the journal of the day they were said, in time order." % s["logged"])
         if s.get("auto_applied"):
             lines.append("  %d low-risk change(s) were applied automatically, as the user allowed." % s["auto_applied"])
     if s.get("held_by_record_policy"):
@@ -704,7 +854,10 @@ def cmd_classify(args):
 
 def cmd_propose(args):
     lib = _lib(args)
-    if args.file:
+    op = args.op
+    if op == "remove_line":
+        op, content = "replace_line", ""
+    elif args.file:
         content = Path(args.file).expanduser().read_text(encoding="utf-8")
     elif args.text == "-":
         content = sys.stdin.read()
@@ -712,8 +865,15 @@ def cmd_propose(args):
         content = args.text
     if content is None:
         raise BrainError("No content given.", fix='Pass --text "..." or --file PATH (or --text - to read from stdin).')
+    old_line = None
+    if op == "replace_line":
+        if not (args.line or "").strip():
+            raise BrainError("%s needs --line." % args.op, fix='Add --line "<a few words of the line to change>".')
+        old_line = proposals.find_line(lib, args.path, args.line)
     _refuse_new_source_labels(lib, args.path, content)
-    p = proposals.create(lib, args.op, args.path, content, args.reason, actor=_actor(args), heading=args.heading)
+    p = proposals.create(
+        lib, op, args.path, content, args.reason, actor=_actor(args), heading=args.heading, old_line=old_line
+    )
     _emit(
         args,
         p,
@@ -723,7 +883,8 @@ def cmd_propose(args):
     return EXIT_OK
 
 
-SOURCE_LABEL = re.compile(r"\[(?:said(?: [0-9-]+)?|judgment|extracted(?::[^\]]*)?|inferred|guess|external(?::[^\]]*)?)\]")
+def _source_labels(text):
+    return collections.Counter(m.group(0) for m in records.MARK.finditer(text or ""))
 
 
 def _refuse_new_source_labels(lib, target, content):
@@ -731,7 +892,7 @@ def _refuse_new_source_labels(lib, target, content):
         old = safe_resolve(lib.root, target).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError, BrainError):
         old = ""
-    if collections.Counter(SOURCE_LABEL.findall(content)) - collections.Counter(SOURCE_LABEL.findall(old)):
+    if _source_labels(content) - _source_labels(old):
         raise BrainError(
             "The text has a source label such as [said ...] that is not in %s yet. Only brainlib note adds these labels." % target,
             fix='For something the user told you, run: brainlib note "<their exact words>" --said --target %s. '
@@ -743,21 +904,32 @@ def _refuse_new_source_labels(lib, target, content):
 def _interactive_review(lib, ps):
     if not (sys.stdin.isatty() and sys.stdout.isatty()):
         raise BrainError("--interactive needs a real terminal.", fix="Run it yourself in a terminal, or use `brainlib review`.")
+    zh = records.lib_lang(lib) == "zh"
+    words = {
+        "ask": "这条改不改？y 改 / n 不要 / l 以后再说 / q 先到这里：" if zh else "Apply this change? [y]es / [n]o / [l]ater / [q]uit: ",
+        "applied": "改好了。\n" if zh else "applied.\n",
+        "rejected": "不改了。\n" if zh else "rejected.\n",
+        "later": "留到以后。\n" if zh else "kept for later.\n",
+    }
     for p in ps:
         print(proposals.render(p, full=True))
         while True:
-            ans = input("Apply this change? [y]es / [n]o / [l]ater / [q]uit: ").strip().lower()
-            if ans in ("y", "yes"):
+            try:
+                ans = input(words["ask"]).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return
+            if ans in ("y", "yes", "是", "改"):
                 proposals.apply(lib, p["id"], approved_by=lib.owner, user_words="approved in the terminal")
-                print("applied.\n")
+                print(words["applied"])
                 break
-            if ans in ("n", "no"):
+            if ans in ("n", "no", "否", "不"):
                 proposals.decide(lib, p["id"], "rejected", lib.owner)
-                print("rejected.\n")
+                print(words["rejected"])
                 break
             if ans in ("l", "later", ""):
                 proposals.decide(lib, p["id"], "deferred", lib.owner)
-                print("kept for later.\n")
+                print(words["later"])
                 break
             if ans in ("q", "quit"):
                 return
@@ -1082,7 +1254,19 @@ def build_parser():
     s.add_argument("--owner")
     s.add_argument("--agents-file", action="store_true", help="also write an AGENTS.md pointer into the folder")
     add("scan", cmd_scan, "rebuild the index (never changes notes)")
-    add("index", cmd_index, "print the reading guide for agents")
+    s = add("index", cmd_index, "print the reading guide for agents; with filters, list records")
+    s.add_argument("--sort", choices=records.SORTS, help="list records sorted by this tag (newest first within it)")
+    s.add_argument("--category", help="only records in this category or folder, e.g. 决定 or decisions")
+    s.add_argument("--importance", help="only records of this importance: high, normal or low")
+    s.add_argument("--since", metavar="YYYY-MM-DD", help="only records said on or after this day")
+    s.add_argument("--until", metavar="YYYY-MM-DD", help="only records said on or before this day")
+    s.add_argument("--level", action="append", help="only records at these levels, e.g. L0 or L0,L1")
+    s.add_argument("--privacy", help="count records of a privacy level (private ones are never shown)")
+    s.add_argument("--limit", type=int, default=50, help="how many records to list (default 50)")
+    s.add_argument("--all", action="store_true", help="list every record")
+    s = add("log", cmd_log, "show records by the day they were said")
+    s.add_argument("--day", metavar="YYYY-MM-DD", help="one day only")
+    s.add_argument("--days", type=int, default=7, help="the last N days (default 7)")
     s = add("find", cmd_find, "find notes about a topic or task")
     s.add_argument("query", nargs="+")
     s.add_argument("--limit", type=int, default=10)
@@ -1099,7 +1283,11 @@ def build_parser():
     g.add_argument("--inferred", action="store_true", help="your own conclusion")
     g.add_argument("--guess", action="store_true", help="your guess")
     g.add_argument("--external", metavar="SOURCE", help="outside material (name the source)")
-    s.add_argument("--said-at", help="when the user said it (YYYY-MM-DD)")
+    s.add_argument("--said-at", help='when the user said it: "YYYY-MM-DD HH:MM" (or just the date); default now')
+    s.add_argument("--category", help="where it belongs: 关于我/about me, 决定/decisions, 日记/journal, or a folder name")
+    s.add_argument("--importance", help="high, normal or low (重要、一般、次要); default normal, decisions high")
+    s.add_argument("--privacy", help="normal, private, confidential or secret (普通、秘密、机密、绝密)")
+    s.add_argument("--replaces", metavar="WORDS", help="a few words of the older statement this one replaces")
     s.add_argument("--private", action="store_true", help="about a topic the user marked sensitive (Q6): handled as they chose (Q7)")
     s.add_argument("--not-sensitive", action="store_true", help=argparse.SUPPRESS)
     s.add_argument("--target", help="the note it probably belongs in")
@@ -1111,12 +1299,13 @@ def build_parser():
     s = add("classify", cmd_classify, "turn inbox items into suggested changes")
     s.add_argument("--dry-run", action="store_true")
     s = add("propose", cmd_propose, "suggest a change to a note")
-    s.add_argument("op", choices=proposals.OPS)
+    s.add_argument("op", choices=proposals.OPS + ("remove_line",))
     s.add_argument("path")
     s.add_argument("--text")
     s.add_argument("--file")
     s.add_argument("--reason", required=True)
     s.add_argument("--heading", help="for append: add at the end of this section")
+    s.add_argument("--line", metavar="WORDS", help="for replace_line and remove_line: a few words of that line")
     s = add("review", cmd_review, "show suggested changes")
     s.add_argument("id", nargs="?")
     s.add_argument("--interactive", action="store_true", help="decide one by one in your own terminal")

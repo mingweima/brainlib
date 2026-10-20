@@ -7,6 +7,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -31,6 +32,7 @@ from brainlib import (  # noqa: E402
     onboard,
     privacy,
     proposals,
+    records,
     scan,
 )
 from brainlib.util import BrainError, atomic_write, command_lock, today, write_json  # noqa: E402
@@ -242,7 +244,7 @@ class InboxTests(Base):
         res = json.loads(out)
         self.assertEqual([n["line"] for n in res["not_filed"]], ["[said 2026-10-20] 我早上只喝茶，不喝咖啡。"])
         code, out = self.cli("index", "--library", str(self.root))
-        self.assertIn("[said 2026-10-20] 我早上只喝茶", out)
+        self.assertIn("2026-10-20 L1 [said] 我早上只喝茶", out)
         self.assertNotIn("血压", out)
         inbox.set_status(lib, tea["id"], "applied")
         code, out = self.cli("find", "早上喝什么", "--library", str(self.root), "--json")
@@ -255,7 +257,7 @@ class InboxTests(Base):
         code, out = self.cli(*args, "--library", str(self.root))
         self.assertEqual(code, 0, out)
         self.assertIn("NEXT: show this to the user", out)
-        self.assertIn("[said %s] add 20k" % today().isoformat(), out)
+        self.assertRegex(out, r"\[said %s \d\d:\d\d\] add 20k" % today().isoformat())
         [p] = proposals.list_proposals(lib, states=("open",))
         code, out = self.cli(*args, "--library", str(self.root))
         self.assertIn(p["id"], out)
@@ -383,13 +385,13 @@ class ClassifyTests(Base):
             lib = config.load(str(root))
             inbox.add(lib, said, "said")
             targets = [p["target"] for p in classify.run(lib, dry_run=True)["proposals"]]
-            self.assertEqual(targets, ["inbox-unsorted.md"], lang)
+            self.assertEqual(targets, ["inbox-unsorted.md", "journal/%s.md" % today().isoformat()], lang)
         root = self.tmp / "lib-en"
         (root / "tea.md").write_text("---\ntitle: Tea\n---\n# Tea\n", encoding="utf-8")
         lib = config.load(str(root))
         scan.scan_library(lib)
         targets = [p["target"] for p in classify.run(lib, dry_run=True)["proposals"]]
-        self.assertEqual(targets, ["tea.md"])
+        self.assertEqual([t for t in targets if not t.startswith("journal/")], ["tea.md"])
         self.assertEqual([e["path"] for e in scan.find(lib, "what do I drink in the morning")][:1], [])
         self.assertIn("drink tea", scan.find_noted(lib, "what do I drink in the morning")[0]["line"])
 
@@ -403,6 +405,133 @@ class ClassifyTests(Base):
             proposals.apply(lib, p["id"], approved_by="human:me", user_words="yes")
             text = (root / "me.md").read_text(encoding="utf-8")
             self.assertGreater(text.index("likes oolong"), text.index(heading), lang)
+
+
+class RecordTests(Base):
+    JOURNAL = {"zones": [{"path": "journal/", "stream": True, "auto_apply": True}], "settings": {"edit_mode": "auto_low_risk"}}
+
+    def test_labels_carry_time_importance_and_category_and_old_ones_still_read(self):
+        m = records.marker("principal-said", when="2026-10-20 09:42", importance="high", category="决定", lang="zh")
+        self.assertEqual(m, "[said 2026-10-20 09:42, 重要, 决定]")
+        rec = records.parse_line("- %s 阅读 app 先做 iOS" % m)
+        self.assertEqual(
+            (rec["when"], rec["importance"], rec["category"], rec["text"]), ("2026-10-20 09:42", "high", "决定", "阅读 app 先做 iOS")
+        )
+        old = records.parse_line("- likes tea [said 2026-10-01]")
+        self.assertEqual((old["when"], old["importance"], old["category"], old["text"]), ("2026-10-01", "normal", None, "likes tea"))
+        self.assertIsNone(records.parse_line("- [external: Smith, 2020] a quote")["category"])
+        self.assertEqual(records.parse_said_at("2026-10-20 9:05"), "2026-10-20 09:05")
+        self.assertEqual(records.parse_said_at("2026-10-20"), "2026-10-20")
+        with self.assertRaises(BrainError):
+            records.parse_said_at("last tuesday")
+
+    def test_note_tags_and_privacy_levels(self):
+        lib = self.lib({})
+        it, _ = inbox.add(lib, "阅读 app 先做 iOS", "said", said_at="2026-10-20 09:45", category="决定")
+        tags = records.item_tags(it, "zh")
+        self.assertEqual(
+            (tags["when"], tags["category"], tags["importance"], tags["estimated"]), ("2026-10-20 09:45", "决定", "high", False)
+        )
+        small, _ = inbox.add(lib, "随口一提", "said", importance="次要")
+        self.assertEqual(small["importance"], "low")
+        self.assertTrue(records.item_tags(small, "zh")["estimated"])
+        for level in ("绝密", "secret"):
+            with self.assertRaises(BrainError) as cm:
+                inbox.add(lib, "one", "said", privacy_level=level)
+            self.assertEqual(cm.exception.code, 3)
+        with self.assertRaises(BrainError) as cm:
+            inbox.add(lib, "two", "said", privacy_level="机密", private_handling="normal")
+        self.assertEqual(cm.exception.code, 3)
+        held, _ = inbox.add(lib, "three", "said", privacy_level="秘密", private_handling="normal")
+        self.assertEqual((held["sensitivity"], held["privacy"]), ("private", "private"))
+        with self.assertRaises(BrainError):
+            inbox.add(lib, "four", "said", importance="urgent")
+        code, out = self.cli("note", "five", "--said", "--said-at", "yesterday-ish", "--library", str(self.root))
+        self.assertEqual(code, 2, out)
+
+    def test_categories_route_and_the_journal_is_kept_in_time_order(self):
+        lib = self.lib(self.JOURNAL)
+        self.write("README.md", "---\ntier: L1\nread_when: [first time here]\n---\n# About\n")
+        self.write("journal/2026-10-20.md", "# 2026-10-20\n\n- [said 2026-10-20 09:00] 早上跑步\n- [said 2026-10-20 11:00] 中午吃面\n")
+        inbox.add(lib, "阅读 app 先做 iOS", "said", said_at="2026-10-20 10:00", category="决定")
+        inbox.add(lib, "下午去爬山", "said", said_at="2026-10-20 10:30", category="日记")
+        inbox.add(lib, "this is my first time here", "said", said_at="2026-10-20 10:45")
+        s = classify.run(lib)
+        self.assertEqual(sorted(p["target"] for p in s["proposals"]), ["decisions.md", "inbox-unsorted.md", "journal/2026-10-20.md"])
+        day = (self.root / "journal/2026-10-20.md").read_text(encoding="utf-8")
+        said = [ln.split("] ", 1)[1] for ln in day.splitlines() if ln.startswith("- ")]
+        self.assertEqual(said, ["早上跑步", "阅读 app 先做 iOS", "下午去爬山", "this is my first time here", "中午吃面"])
+        self.assertIn("- [said 2026-10-20 10:00, 重要, 决定] 阅读 app 先做 iOS\n", day)
+        pid = [p["id"] for p in s["proposals"] if p["target"] == "decisions.md"][0]
+        proposals.apply(lib, pid, approved_by="human:me")
+        decisions = (self.root / "decisions.md").read_text(encoding="utf-8")
+        self.assertIn("title: 决定", decisions)
+        self.assertIn("read_when:", decisions)
+        inbox.add(lib, "补记一件旧事", "said", said_at="2026-10-05 20:00", category="日记")
+        classify.run(lib)
+        new_day = (self.root / "journal/2026-10-05.md").read_text(encoding="utf-8")
+        self.assertIn("type: Journal", new_day)
+        self.assertIn("created: 2026-10-05", new_day)
+        self.assertIn("# 2026-10-05", new_day)
+
+    def test_a_change_of_mind_replaces_the_line_and_a_restatement_only_logs_the_time(self):
+        lib = self.lib(self.JOURNAL)
+        self.write("me.md", "---\ntier: L0\n---\n# Me\n\n- [said 2026-10-12 08:00] 不喝咖啡\n- [said 2026-10-13 21:05] 回复别超过三段\n")
+        inbox.add(lib, "每天一杯咖啡", "said", said_at="2026-10-20 09:00", replaces="不喝咖啡")
+        inbox.add(lib, "回复别超过三段", "said", said_at="2026-10-20 09:30")
+        s = classify.run(lib)
+        self.assertEqual(s["duplicates"], 1)
+        [swap] = [p for p in proposals.list_proposals(lib, states=("open",)) if p["op"] == "replace_line"]
+        self.assertIn("（10-12 说的是：不喝咖啡）", swap["content"])
+        self.assertIn("old line:", proposals.render(swap))
+        proposals.apply(lib, swap["id"], approved_by="human:me", user_words="对")
+        me = (self.root / "me.md").read_text(encoding="utf-8")
+        self.assertIn("- [said 2026-10-20 09:00] 每天一杯咖啡（10-12 说的是：不喝咖啡）\n", me)
+        self.assertNotIn("] 不喝咖啡", me)
+        code, out = self.cli("index", "--library", str(self.root))
+        self.assertIn("said again 2026-10-20 09:30", out)
+        code, out = self.cli("propose", "append", "me.md", "--text", "- [said 2026-10-20 08:59] 新的话", "--reason", "x", "--library", str(self.root))
+        self.assertEqual(code, 2, out)
+        code, out = self.cli("propose", "remove_line", "me.md", "--line", "三段", "--reason", "said differently", "--library", str(self.root))
+        self.assertEqual(code, 0, out)
+        pid = re.search(r"P-[0-9T]+-[0-9a-f]{6}", out).group(0)
+        self.write("me.md", "---\ntier: L0\n---\n# Me\n")
+        with self.assertRaises(BrainError) as cm:
+            proposals.apply(lib, pid, approved_by="human:me", user_words="删吧")
+        self.assertEqual(cm.exception.code, 5)
+
+    def test_index_filters_log_single_characters_health_and_mcp(self):
+        self.lib(self.JOURNAL)
+        self.write(
+            "me.md",
+            "---\ntier: L0\n---\n# Me\n\n- [said 2026-10-01 08:00] 回复别超过三段\n- [said 2026-10-15 08:00] 回复别超过五段\n"
+            "- [said 2026-10-02 09:00, 次要] 喜欢绿茶\n",
+        )
+        lib = self.lib()
+        inbox.add(lib, "阅读 app 先做 iOS", "said", said_at="2026-10-16 10:00", category="决定")
+        lib_arg = ("--library", str(self.root))
+        code, out = self.cli("index", *lib_arg)
+        self.assertIn("## Important, not filed yet (L0)", out)
+        self.assertIn("## Maybe out of date", out)
+        code, out = self.cli("index", "--importance", "low", "--json", *lib_arg)
+        self.assertEqual([r["text"] for r in json.loads(out)["records"]], ["喜欢绿茶"])
+        code, out = self.cli("index", "--since", "2026-10-10", "--sort", "importance", "--json", *lib_arg)
+        self.assertEqual([r["text"] for r in json.loads(out)["records"]], ["阅读 app 先做 iOS", "回复别超过五段"])
+        code, out = self.cli("log", "--day", "2026-10-02", *lib_arg)
+        self.assertIn("喜欢绿茶", out)
+        self.assertNotIn("五段", out)
+        code, out = self.cli("find", "茶", *lib_arg)
+        self.assertIn("me.md", out)
+        code, out = self.cli("health", *lib_arg)
+        self.assertIn("look-alike lines", out)
+        argv = mcp._argv_for("kb_note", {"text": "x", "provenance": "said", "category": "决定", "replaces": "旧"}, None)
+        self.assertEqual(argv[argv.index("--category") + 1], "决定")
+        self.assertIn("--replaces", argv)
+        self.assertEqual(
+            mcp._argv_for("kb_index", {"sort": "importance", "level": "L0", "all": True}, None),
+            ["index", "--sort", "importance", "--level", "L0", "--all"],
+        )
+        self.assertEqual(mcp._argv_for("kb_log", {"days": 3}, None), ["log", "--days", "3"])
 
 
 class OnboardingTests(Base):
@@ -543,8 +672,10 @@ class ConnectTests(Base):
         scan.scan_library(lib)
         s = nextstep.compute(lib)
         self.assertEqual(s["key"], "all-clear")
-        self.assertIn("1 suggested change(s) wait", s["next"])
-        self.assertIn("--target journal/%s.md" % today().isoformat(), s["rules"])
+        self.assertIn("2 suggested change(s) wait", s["next"])
+        self.assertIn("--category", s["rules"])
+        self.assertIn("--replaces", s["rules"])
+        self.assertIn("the one said last counts", s["rules"])
         self.assertIn("never for something brainlib refused to save", s["rules"])
         code, out = self.cli("note", "I am allergic to peanuts", "--said", "--private", "--library", str(self.root))
         self.assertEqual(code, 3, out)

@@ -6,6 +6,10 @@ Operations
 - create: make a new note. Fails if the file already exists.
 - replace: replace a whole note. Records the hash of the version it was based on; if the
   note changed since, the proposal goes stale and must be redone.
+- replace_line: replace one line with new text, or remove it when the text is empty. Still
+  valid if other lines changed; goes stale if that exact line is gone.
+An append with order "time" (used for journals) puts each line among the dated lines of
+the note by when it was said, instead of at the end.
 
 Who approves
 - Core (L0) and entry (L1) pages: always the owner.
@@ -37,13 +41,15 @@ from .util import (
     safe_resolve,
     sha256_bytes,
     sha256_file,
+    sha256_text,
     strip_dot_slash,
     today_str,
     write_json,
 )
 
-OPS = ("append", "create", "replace")
+OPS = ("append", "create", "replace", "replace_line")
 OPEN_STATES = ("open", "deferred")
+_DAY_STEM = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _dir(lib):
@@ -141,13 +147,26 @@ def _approval(settings, op, info):
     return "owner"
 
 
-def create(lib, op, target, content, reason, actor="agent/unknown", evidence=None, heading=None):
+def create(
+    lib,
+    op,
+    target,
+    content,
+    reason,
+    actor="agent/unknown",
+    evidence=None,
+    heading=None,
+    old_line=None,
+    order=None,
+    new_note=None,
+):
     settings = onboard.settings(lib)
     require_not_read_only(settings)
     if op not in OPS:
-        raise BrainError("Unknown operation %r." % op, fix="Use append, create or replace.")
-    content = (content or "").rstrip() + "\n"
-    if not content.strip():
+        raise BrainError("Unknown operation %r." % op, fix="Use append, create, replace or replace_line.")
+    content = (content or "").rstrip()
+    content = content + "\n" if content else ""
+    if not content.strip() and op != "replace_line":
         raise BrainError("The proposal has no content.", fix="Pass the text to add.")
     if not (reason or "").strip():
         raise BrainError("Every proposal needs a reason.", fix='Add --reason "why this change helps the user".')
@@ -171,8 +190,18 @@ def create(lib, op, target, content, reason, actor="agent/unknown", evidence=Non
         )
     if op == "create" and info["exists"]:
         raise BrainError("%s already exists." % info["rel"], fix="Use append to add to it.", code=EXIT_CONFLICT)
-    if op == "replace" and not info["exists"]:
+    if op in ("replace", "replace_line") and not info["exists"]:
         raise BrainError("%s does not exist." % info["rel"], fix="Use create for a new note.")
+    if op == "replace_line":
+        old_line = (old_line or "").rstrip("\r\n")
+        if not old_line.strip():
+            raise BrainError("replace_line needs the line to replace.", fix="Pass a few words of that line.")
+        lines = info["full"].read_bytes().decode("utf-8").splitlines()
+        if old_line not in [ln.rstrip("\r") for ln in lines]:
+            raise BrainError(
+                "%s has no line that is exactly: %s" % (info["rel"], old_line[:120]),
+                fix="Run `brainlib find` or read the note again, then use a few words of the current line.",
+            )
     p = {
         "schema": "brainlib/proposal@0.1",
         "id": new_id("P"),
@@ -191,13 +220,44 @@ def create(lib, op, target, content, reason, actor="agent/unknown", evidence=Non
         "approval": _approval(settings, op, info),
         "edit_mode": settings.get("edit_mode"),
     }
+    if op == "replace_line":
+        p["old_line"] = privacy.redact(old_line)
+        p["old_line_sha256"] = sha256_text(old_line)
+    if order:
+        p["order"] = order
+    if new_note:
+        p["new_note"] = new_note
     _save(lib, p)
     return p
+
+
+def find_line(lib, target, words):
+    """The one line of a note that contains these words (ignoring spaces and punctuation)."""
+    from . import records
+
+    info = target_info(lib, target)
+    if not info["exists"]:
+        raise BrainError("%s does not exist." % info["rel"], fix="Check the path with `brainlib find`.")
+    want = records.squash(words)
+    lines = [ln.rstrip("\r") for ln in info["full"].read_bytes().decode("utf-8").splitlines()]
+    hits = [ln for ln in lines if want and ln.strip() and not ln.lstrip().startswith("#") and want in records.squash(ln)]
+    if len(hits) != 1:
+        raise BrainError(
+            "%s has %s line(s) with %r." % (info["rel"], len(hits) or "no", words),
+            fix="Use words that only the line you mean has." if hits else "Read the note again and copy a few words of the line.",
+        )
+    return hits[0]
+
+
+_LIST_LINE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+\S")
 
 
 def _append_text(existing, content, heading):
     text = existing if existing.endswith("\n") or not existing else existing + "\n"
     if not heading:
+        last = [ln for ln in text.splitlines() if ln.strip()][-1:]
+        if last and _LIST_LINE.match(last[0]) and _LIST_LINE.match(content):
+            return re.sub(r"[\r\n]+$", "", text) + "\n" + content
         sep = "" if not text or text.endswith("\n\n") else "\n"
         return text + sep + content
     lines = text.splitlines(keepends=True)
@@ -229,10 +289,54 @@ def _append_text(existing, content, heading):
     return block + content + ("\n" + rest if rest else "")
 
 
-def _new_note_text(rel, content):
-    title = Path(rel).stem.replace("-", " ").replace("_", " ").strip().capitalize() or "Note"
-    fm = {"type": "Note", "title": title, "created": today_str()}
+def _new_note_text(rel, content, journal=False, header=None):
+    stem = Path(rel).stem
+    if journal and _DAY_STEM.match(stem):
+        title = stem
+        fm = {"type": "Journal", "title": stem, "created": stem}
+    else:
+        header = dict(header or {})
+        title = header.pop("title", None) or stem.replace("-", " ").replace("_", " ").strip().capitalize() or "Note"
+        fm = {"type": "Note", "title": title, "created": today_str()}
+        fm.update(header)
     return frontmatter.render(fm, "# %s\n\n%s" % (title, content))
+
+
+def _insert_by_time(existing, content):
+    """Put each new line among the note's dated lines by when it was said; undated lines go last."""
+    from . import records
+
+    text = existing if existing.endswith("\n") or not existing else existing + "\n"
+    lines = text.splitlines(keepends=True)
+    for new in content.rstrip("\n").splitlines():
+        key = records.line_time_key(new) or "9999"
+        pos = None
+        for i, line in enumerate(lines):
+            k = records.line_time_key(line)
+            if k is not None and k > key:
+                pos = i
+                break
+        if pos is None:
+            last = len(lines)
+            while last and not lines[last - 1].strip():
+                last -= 1
+            if last and records.line_time_key(lines[last - 1]) is not None:
+                pos = last
+            else:
+                lines = _append_text("".join(lines), new + "\n", None).splitlines(keepends=True)
+                continue
+        lines.insert(pos, new + "\n")
+    return "".join(lines)
+
+
+def _replace_line(existing, old_sha, content):
+    """The note with the line whose hash is old_sha replaced by content (or removed), or None if gone."""
+    lines = existing.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if sha256_text(line.rstrip("\r\n")) == old_sha:
+            lines[i:i + 1] = [ln + "\n" for ln in content.rstrip("\n").splitlines()] if content.strip() else []
+            return "".join(lines)
+    return None
 
 
 def _check_approver(lib, p, approved_by, user_words):
@@ -301,10 +405,23 @@ def apply(lib, pid, approved_by=None, user_words=None):
             return _stale(lib, p, "the file was created in the meantime")
         if p["op"] == "replace" and before_sha != p.get("base_sha256"):
             return _stale(lib, p, "the note changed after this proposal was made")
-        if p["op"] == "append":
-            new = _append_text(before.decode("utf-8", "replace"), p["content"], p.get("heading")) if before is not None else _new_note_text(p["target"], p["content"])
-        elif p["op"] == "create":
-            new = p["content"] if p["content"].lstrip().startswith(("---", "#")) else _new_note_text(p["target"], p["content"])
+        if p["op"] in ("append", "create") and before is None:
+            if p["op"] == "create" and p["content"].lstrip().startswith(("---", "#")):
+                new = p["content"]
+            else:
+                new = _new_note_text(p["target"], p["content"], journal=info["stream"], header=p.get("new_note"))
+        elif p["op"] == "append":
+            old = before.decode("utf-8", "replace")
+            if p.get("order") == "time":
+                new = _insert_by_time(old, p["content"])
+            else:
+                new = _append_text(old, p["content"], p.get("heading"))
+        elif p["op"] == "replace_line":
+            if before is None:
+                return _stale(lib, p, "the note is gone")
+            new = _replace_line(before.decode("utf-8", "replace"), p.get("old_line_sha256"), p["content"])
+            if new is None:
+                return _stale(lib, p, "the line to replace is no longer in the note")
         else:
             new = p["content"]
         if before is not None and b"\r\n" in before:
@@ -391,7 +508,7 @@ def _mark_items(lib, p, status):
     from . import inbox
 
     for ev in p.get("evidence") or []:
-        if ev.get("item"):
+        if ev.get("item") and ev.get("role") != "log":
             inbox.set_status(lib, ev["item"], status, ref=p["id"])
 
 
@@ -469,6 +586,16 @@ def render(p, lang="en", full=False):
     ]
     if p.get("provenance"):
         lines.append("  based on: %s" % ", ".join(p["provenance"]))
+    if p["op"] == "replace_line":
+        lines.append("  old line:")
+        lines.append("    " + (p.get("old_line") or ""))
+        new = p["content"].rstrip("\n")
+        if not new:
+            lines.append("  new line: none, the old line is removed")
+            return "\n".join(lines)
+        lines.append("  new line:")
+        lines.extend("    " + ln for ln in new.splitlines())
+        return "\n".join(lines)
     content = p["content"].rstrip("\n")
     if not full and len(content) > 600:
         content = content[:600] + "\n  ... (%d more characters; use `brainlib review %s`)" % (len(p["content"]) - 600, p["id"])

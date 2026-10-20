@@ -16,17 +16,20 @@ Only tested on Mac and Linux so far. AIs in a web page or a phone app can't use 
 
 At the start of each new conversation, the AI reads a few core pages of the brain library, such as "About me", the way a new colleague reads the handover notes on day one. Other notes are looked up when needed, so the whole library never gets stuffed into the conversation.
 
-When you say something worth remembering, the capturer puts your exact words into the buffer (the AI may call it the inbox when it talks to you), labeled "you said" with the date. The AI's own guesses are labeled as guesses, and things found online carry their source; only what you said counts as what you meant. Other AIs can find what's in the buffer right away, but it isn't part of your notes yet.
+When you say something worth remembering, the capturer puts your exact words into the buffer (the AI may call it the inbox when it talks to you), labeled "you said" with the time you said it, to the minute, plus what kind of thing it is and how much it matters. The AI's own guesses are labeled as guesses, and things found online carry their source; only what you said counts as what you meant. Other AIs can find what's in the buffer right away, but it isn't part of your notes yet.
 
-Every so often the organizer turns the buffer into suggested changes and shows them to you. Nothing goes into your notes until you say yes, and a wrong change can be undone. How often this happens, and whether things like a journal can be recorded directly, are up to you during setup.
+Every so often the organizer turns the buffer into suggested changes and shows them to you, one per record. Nothing goes into your notes until you say yes, and a wrong change can be undone. Everything also goes into the day's log in the order it was said, so you can look up what you said on any day. When you said different things about the same matter, the newest one counts; when you change your mind, it offers to replace the old line and keeps the old wording in brackets. How often this happens, and whether things like a journal can be recorded directly, are up to you during setup.
 
-The maintainer finds pages past their check-again date, broken links and passwords that ended up in notes, and asks whether to update or archive them. Every few months it goes over the setup questions with you again, and if what you've been saying lately doesn't match an earlier answer, it asks about that too. All of this comes up the next time you talk to an AI; it never pops up on its own.
+The guide the AI reads has a fixed length: the most important pages and the latest things you said come first, older ones sink, so it does not grow with the library. Older records can be filtered by category, date or importance.
+
+The maintainer finds pages past their check-again date, broken links, passwords that ended up in notes, and lines in the same note that no longer agree, and asks whether to update or archive them. Every few months it goes over the setup questions with you again, and if what you've been saying lately doesn't match an earlier answer, it asks about that too. All of this comes up the next time you talk to an AI; it never pops up on its own.
 
 ## What it looks like
 
 - On Monday you mention in Cursor that you never use exclamation marks. On Wednesday you ask Claude Code to write an email; it checks the brain library first, and the email has no exclamation marks.
 - You say "I'm going to Chengdu on business next month", and that sentence is what it saves. If it guesses you like spicy food, that's saved as a guess.
 - A few days later it asks "Add 'only drinks tea in the morning' to About me?", and it changes the note only after you say yes.
+- Last month you said "no coffee"; today you say "one cup a day now". It asks "Replace 'no coffee' with 'one cup of coffee a day'?", and from then on every AI goes by the new one.
 - You say "My bank card PIN is 4821, please remember it." It won't, and suggests a password manager instead. <!-- brainlib:allow -->
 
 ## Installing
@@ -104,7 +107,7 @@ I first built a brain library for myself. Several AIs read it and write to it da
 AGENTS.md          Entry point for AI assistants (Chinese; English in AGENTS.en.md)
 brainlib.py        Launcher for macOS/Linux; on Windows use brainlib.cmd
 brainlib/          The program (Python standard library only)
-skills/            Six task guides: setup, onboarding, capture, organize, privacy, maintenance
+skills/            Task guides: setup, onboarding, capture, organize, privacy, maintenance, and a writing guide (Chinese only)
 spec/              Note format, provenance labels, command conventions
 docs/              Status, roadmap, threat model, MCP setup
 templates/         Permission templates for AI tools

@@ -7,7 +7,7 @@ proposals; only an approved proposal changes a note.
 import re
 from pathlib import Path
 
-from . import privacy, provenance
+from . import i18n, privacy, provenance, records
 from .util import (
     BrainError,
     EXIT_PRIVACY,
@@ -54,21 +54,25 @@ def all_items(lib):
 
 
 def not_filed_for_agents(lib):
-    """Items written down but not in any note yet, newest first. Private items are never included."""
+    """Items written down but not in any note yet, newest said first. Private items are never included."""
     items = [
         it
         for it in all_items(lib)
         if it["status"] in NOT_FILED and it.get("text") and it.get("sensitivity") != "private"
     ]
-    items.reverse()
+    items.sort(key=lambda it: records.time_key(it.get("said_at") or it.get("captured_at")), reverse=True)
     return items
 
 
-def describe(it):
-    """One line for agents, with the same source marker the note would get, e.g. `[said 2026-10-20] ...`."""
-    date = (it.get("said_at") or it.get("captured_at") or "")[:10] or None
+def describe(it, lang=None):
+    """One line for agents, with the source label the note would get, e.g. `[said 2026-10-20 09:42] ...`."""
+    lang = lang or i18n.DEFAULT_LANG
+    tags = records.item_tags(it, lang)
     source = (it.get("source") or {}).get("ref")
-    return "%s %s" % (provenance.marker(it["provenance"], date=date, source=source), it["text"].replace("\n", " "))
+    mark = records.marker(
+        it["provenance"], when=tags["when"], source=source, importance=tags["importance"], category=tags["category"], lang=lang
+    )
+    return "%s %s" % (mark, it["text"].replace("\n", " "))
 
 
 def set_status(lib, item_id, status, ref=None):
@@ -94,12 +98,18 @@ def add(
     tags=None,
     sensitivity="internal",
     private_handling="exclude",
+    category=None,
+    importance=None,
+    privacy_level=None,
+    replaces=None,
 ):
     """Validate and append one inbox item. Returns (item, duplicate_of_or_None).
 
-    Private items are encrypted into the vault when it is set up. Without a vault they are
-    kept (outside the library, readable only by this user account) only if the user chose
-    `ask_first` or `normal` for sensitive things; otherwise they are refused.
+    Each item carries four tags (see docs/records.md): when it was said (to the minute),
+    category, importance and privacy level. Private items are encrypted into the vault when
+    it is set up. Without a vault they are kept (outside the library, readable only by this
+    user account) only if the user chose `ask_first` or `normal` for sensitive things;
+    otherwise they are refused. Confidential items only ever go into the vault.
     """
     text = (text or "").strip()
     if not text:
@@ -113,14 +123,33 @@ def add(
     if source_kind not in SOURCE_KINDS:
         raise BrainError("Unknown source kind %r." % source_kind, fix="Use one of: %s" % ", ".join(SOURCE_KINDS))
     sensitivity = (sensitivity or "internal").lower()
-    if sensitivity == "secret":
+    level = records.normalize_privacy(privacy_level)
+    if sensitivity == "secret" or level == "secret":
         raise BrainError(
-            "Secrets are never stored in the library.",
+            "Secrets (绝密) are never stored in the library.",
             fix="Keep it in a password manager and save only where to find it.",
             code=EXIT_PRIVACY,
         )
     if sensitivity not in ("public", "internal", "private"):
         raise BrainError("Unknown sensitivity %r." % sensitivity, fix="Use public, internal or private.")
+    if level == "normal" and sensitivity == "private":
+        raise BrainError(
+            "--private and --privacy normal disagree.",
+            fix="Use --privacy private (秘密) or confidential (机密) for private things, or drop --private.",
+        )
+    if level in ("private", "confidential"):
+        sensitivity = "private"
+    elif sensitivity == "private":
+        level = "private"
+    said = records.parse_said_at(said_at) if said_at else None
+    category = records.clean_category(category)
+    importance = records.normalize_importance(importance)
+    replaces = re.sub(r"\s+", " ", (replaces or "")).strip()
+    if len(replaces) > records.MAX_REPLACES:
+        raise BrainError(
+            "--replaces is too long (limit %d characters)." % records.MAX_REPLACES,
+            fix="A few words that only the older line has are enough.",
+        )
     privacy.refuse_if_secret(text)
     if target:
         target = strip_dot_slash(target)
@@ -133,7 +162,7 @@ def add(
             return it, it["id"]
 
     item = {
-        "schema": "brainlib/inbox-item@0.1",
+        "schema": "brainlib/inbox-item@0.2",
         "id": new_id("I"),
         "captured_at": now_iso(),
         "actor": actor or "agent/unknown",
@@ -143,11 +172,19 @@ def add(
         "content_sha256": digest,
     }
     if prov == "principal-said":
-        item["said_at"] = said_at or item["captured_at"]
-        if not said_at:
+        item["said_at"] = said or records.minute(item["captured_at"])
+        if not said:
             item["said_at_estimated"] = True
-    elif said_at:
-        item["said_at"] = said_at
+    elif said:
+        item["said_at"] = said
+    if category:
+        item["category"] = category
+    if importance:
+        item["importance"] = importance
+    if level in ("private", "confidential"):
+        item["privacy"] = level
+    if replaces:
+        item["replaces"] = replaces
     if target or tier or tags:
         item["suggest"] = {"target": target, "tier": tier, "tags": list(tags or [])}
 
@@ -167,6 +204,17 @@ def add(
             rel = Path("inbox-private") / today_str() / ("%s.age" % item["id"])
             vault.encrypt_to(lib, text, lib.state(*rel.parts))
             item["encrypted_ref"] = rel.as_posix()
+        elif level == "confidential":
+            raise BrainError(
+                "This is confidential (机密), which only ever goes into the encrypted vault, and the vault is not "
+                "set up, so it was NOT saved.",
+                fix=(
+                    "Do not save it any other way (not with propose either). Tell the user: 'I didn't save that "
+                    "because it's confidential. If you want me to keep such things, please run `brainlib vault init` "
+                    "yourself in a terminal (it asks you for a passphrase).'"
+                ),
+                code=EXIT_PRIVACY,
+            )
         elif private_handling in ("ask_first", "normal"):
             item["text"] = text
         else:

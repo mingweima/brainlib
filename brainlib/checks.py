@@ -24,6 +24,11 @@ EXPLAIN = {
     ),
     "invalid_values": ("A header field has a value brainlib does not know.", "Use the values listed in spec/front-matter.md."),
     "future_dates": ("A note says it was updated in the future.", "Fix the date in the `updated` field."),
+    "outdated": (
+        "A note has look-alike lines said at different times; the older one may be out of date.",
+        "The newer one counts. Ask the user whether to drop the older line; if yes, run "
+        "`brainlib propose remove_line <note> --line \"<a few words of the older line>\" --reason \"said differently later\"`.",
+    ),
 }
 ORDER = list(EXPLAIN)
 

@@ -300,29 +300,47 @@ def _compute(lib, lang):
     )
 
 
+WRITING_SKILL = Path(__file__).resolve().parent.parent / "skills" / "brainlib-writing" / "SKILL.md"
+CATEGORY_WORDS = {
+    "zh": {"me": "关于我", "decisions": "决定", "journal": "日记"},
+    "en": {"me": "me", "decisions": "decisions", "journal": "journal"},
+}
+
+
 def daily_rules(lib, settings):
     """How to read and record during any conversation once setup is done, whatever the step."""
-    journal = next((z["path"] for z in lib.config.get("zones") or [] if z.get("stream") and z.get("path")), None)
+    from . import records
+
+    lang = records.lib_lang(lib)
+    cat = CATEGORY_WORDS["zh" if lang == "zh" else "en"]
+    journal = records.journal_dir(lib)
     sensitive = _sensitive_line(lib, settings)
-    return (
+    rules = (
         "Once per conversation, before your first answer: run brainlib index and read every core page (L0) it lists "
         "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
         "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
+        "Every noted line starts with when it was said. When two lines say different things about the same matter, "
+        "the one said last counts.\n"
         "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said%s\n"
         % (" (add --private if it is about a topic on the next line)" if sensitive else "")
         + sensitive
-        + "If the user says which note it belongs in, add --target <that note's path> --now, and show the user the change it prints.\n"
-        "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
-        + (
-            "If it is something that happened or is planned (a trip, an event, how the day went), add --target %s%s.md.\n"
-            % (journal.rstrip("/") + "/", today().isoformat())
-            if journal else ""
-        )
-        + "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
+        + "Add --category %s for the user themself (a preference, habit or value), --category %s for something they "
+        "decided%s. Add --importance high for what matters a lot to them, low for small things.\n"
+        % (cat["me"], cat["decisions"],
+           (", --category %s for something that happened or is planned" % cat["journal"]) if journal else "")
+        + "If they said it earlier than now, add --said-at \"YYYY-MM-DD HH:MM\". If they changed their mind about "
+        "something already noted, add --replaces \"<a few words of the old statement>\".\n"
+        "If the user says which note it belongs in, add --target <that note's path> --now, and show the user the change it prints.\n"
+        "Near the end of a conversation, note each decision and preference the user stated that is not noted yet, "
+        "one per note. Skip small talk.\n"
+        "Record your own conclusions only as --inferred, and outside material only as --external <source>.\n"
         "What the user tells you always goes through brainlib note. Use brainlib propose only to correct or remove "
         "what a note already says, never to add what the user just told you, and never for something brainlib refused to save.\n"
         "Never edit note files directly, never open the vault, never store passwords."
     )
+    if lang == "zh" and WRITING_SKILL.is_file():
+        rules += "\n用中文回复用户、往库里写东西时，照 %s 里的规矩说人话。结论放在开头，句子写完整，不用黑话。" % WRITING_SKILL
+    return rules
 
 
 def _sensitive_line(lib, settings):

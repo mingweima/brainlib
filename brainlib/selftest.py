@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -113,8 +114,14 @@ def run(verbose=False):
         r.check("classify turns the inbox into a suggested change", code == 0 and "suggested change" in out, out)
         r.check("classify changes no note", _sha(lib_dir / "me.md") == before_me)
         code, out = r.cli("review", "--json", *lib)
-        ps = json.loads(out)
+        allps = json.loads(out)
+        ps = [p for p in allps if not p["target"].startswith("journal/")]
         r.check("one suggested change is waiting", len(ps) == 1, out)
+        r.check(
+            "the day's journal gets the same record, with the time it was said",
+            any(p["target"].startswith("journal/") and re.search(r"\[said \d{4}-\d\d-\d\d \d\d:\d\d\] 我早上只喝茶", p["content"]) for p in allps),
+            out,
+        )
         pid = ps[0]["id"] if ps else "P-00000000T000000-000000"
         code, out = r.cli("apply", pid, *lib)
         r.check("apply without the user's yes is refused", code == 4, out)
@@ -124,6 +131,31 @@ def run(verbose=False):
         r.check("the note now has the user's words with a source marker", target.is_file() and "[said " in target.read_text(encoding="utf-8"))
         code, out = r.cli("undo", pid, "--as", "human:me", *lib)
         r.check("undo restores the note", code == 0 and ("[said " not in target.read_text(encoding="utf-8") if target.exists() else True), out)
+
+        code, out = r.cli("note", "回复别超过三段", "--said", "--said-at", "2026-10-13 21:05", "--category", "关于我", *lib)
+        r.check("a note keeps when it was said, to the minute, and its category", "2026-10-13 21:05" in out and "关于我" in out, out)
+        r.cli("classify", *lib)
+        first = [p for p in json.loads(r.cli("review", "--json", *lib)[1]) if p["target"] == "me.md"]
+        if first:
+            r.cli("apply", first[0]["id"], "--as", "human:me", "--user-said", "好的", *lib)
+        r.cli("note", "回复别超过五段", "--said", "--category", "关于我", "--replaces", "三段", *lib)
+        r.cli("classify", *lib)
+        swap = [p for p in json.loads(r.cli("review", "--json", *lib)[1]) if p["op"] == "replace_line"]
+        r.check(
+            "a change of mind becomes a replace-line suggestion that keeps the old wording",
+            len(swap) == 1 and "说的是：回复别超过三段" in swap[0]["content"],
+            json.dumps(swap, ensure_ascii=False)[:400],
+        )
+        if swap:
+            r.cli("apply", swap[0]["id"], "--as", "human:me", "--user-said", "对，改了", *lib)
+        me = (lib_dir / "me.md").read_text(encoding="utf-8")
+        r.check("after the user's yes only the newer statement stays", "回复别超过五段" in me and "] 回复别超过三段" not in me, me[-300:])
+        code, out = r.cli("index", "--category", "关于我", *lib)
+        r.check("records can be filtered by category", code == 0 and "回复别超过五段" in out, out)
+        code, out = r.cli("log", "--days", "1", *lib)
+        r.check("the log shows records by the day they were said", code == 0 and "回复别超过五段" in out, out)
+        code, out = r.cli("find", "段", *lib)
+        r.check("a single Chinese character finds notes", code == 0 and "me.md" in out, out)
 
         (lib_dir / "private" / "health.md").write_text("# Health\n\nprivate details\n", encoding="utf-8")
         code, out = r.cli("read", "private/health.md", *lib)

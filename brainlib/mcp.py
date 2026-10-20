@@ -18,7 +18,7 @@ PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 INSTRUCTIONS = (
     "brainlib manages the user's personal knowledge library. Start every session with kb_next and follow it. "
     "When its output says `RUN: brainlib <command>`, call the matching tool: next->kb_next, agent-check->kb_agent_check, "
-    "lang->kb_lang, find->kb_find, read->kb_read, index->kb_index, health->kb_health, note->kb_note, "
+    "lang->kb_lang, find->kb_find, read->kb_read, index->kb_index, log->kb_log, health->kb_health, note->kb_note, "
     "onboard->kb_onboard, classify->kb_classify, review->kb_proposals, apply/reject/defer->kb_decide, doctor->kb_doctor. "
     "Never claim the user approved something they did not approve. Never ask for the vault passphrase."
 )
@@ -43,17 +43,37 @@ TOOLS = [
     {"name": "kb_doctor", "description": "Check this computer and suggest where the library should live.", "inputSchema": _s("")},
     {"name": "kb_find", "description": "Find notes about a topic or task. Use before answering anything about the user.", "inputSchema": _s("", query=STR, limit=INT)},
     {"name": "kb_read", "description": "Read one note by path. Private notes are refused.", "inputSchema": _s("", path=STR)},
-    {"name": "kb_index", "description": "The reading guide: the most important notes first.", "inputSchema": _s("")},
+    {
+        "name": "kb_index",
+        "description": (
+            "The reading guide: core pages, recent records (newest said first) and the last days' journal, with a "
+            "fixed length. With any filter it lists records instead: sort (time, importance, category, privacy, "
+            "level), category, importance (high, normal, low), since/until (YYYY-MM-DD), level (L0-L3), limit, all."
+        ),
+        "inputSchema": _s(
+            "", sort=STR, category=STR, importance=STR, since=STR, until=STR, level=STR, privacy=STR, limit=INT, all=BOOL
+        ),
+    },
+    {
+        "name": "kb_log",
+        "description": "Records by the day they were said: one day (YYYY-MM-DD) or the last N days (default 7).",
+        "inputSchema": _s("", day=STR, days=INT),
+    },
     {"name": "kb_health", "description": "Tidy-up issues: broken links, outdated pages, conflicts.", "inputSchema": _s("")},
     {
         "name": "kb_note",
         "description": (
             "Save something to the inbox (changes no note). provenance: said (user's exact words), judgment, "
-            "extracted (with source = file), inferred, guess, external (with source). private: true if it is about "
-            "a topic the user marked sensitive. now=true with target makes the suggested change right away, for "
-            "when the user named the note."
+            "extracted (with source = file), inferred, guess, external (with source). said_at: when the user said "
+            "it, \"YYYY-MM-DD HH:MM\". category: me, decisions, journal or a folder name (Chinese: 关于我, 决定, 日记). "
+            "importance: high, normal or low. replaces: a few words of an older statement this one replaces. "
+            "private: true if it is about a topic the user marked sensitive. now=true with target makes the "
+            "suggested change right away, for when the user named the note."
         ),
-        "inputSchema": _s("", text=STR, provenance=STR, source=STR, said_at=STR, target=STR, private=BOOL, now=BOOL),
+        "inputSchema": _s(
+            "", text=STR, provenance=STR, source=STR, said_at=STR, category=STR, importance=STR, privacy=STR,
+            replaces=STR, target=STR, private=BOOL, now=BOOL,
+        ),
     },
     {
         "name": "kb_onboard",
@@ -119,7 +139,22 @@ def _argv_for(name, a, library):
     if name == "kb_read":
         return ["read", g("path")] + lib
     if name == "kb_index":
-        return ["index"] + lib
+        argv = ["index"] + lib
+        for key in ("sort", "category", "importance", "since", "until", "level", "privacy"):
+            if g(key):
+                argv += ["--" + key, str(g(key))]
+        if g("limit"):
+            argv += ["--limit", str(g("limit"))]
+        if g("all") is True:
+            argv.append("--all")
+        return argv
+    if name == "kb_log":
+        argv = ["log"] + lib
+        if g("day"):
+            argv += ["--day", str(g("day"))]
+        if g("days"):
+            argv += ["--days", str(g("days"))]
+        return argv
     if name == "kb_health":
         return ["health"] + lib
     if name == "kb_note":
@@ -130,8 +165,10 @@ def _argv_for(name, a, library):
         if flag is None:
             raise _Fail("provenance must be one of: said, judgment, extracted, inferred, guess, external")
         argv = ["note", g("text")] + flag + lib + actor
-        if g("said_at"):
-            argv += ["--said-at", g("said_at")]
+        for key, flag in (("said_at", "--said-at"), ("category", "--category"), ("importance", "--importance"),
+                          ("privacy", "--privacy"), ("replaces", "--replaces")):
+            if g(key):
+                argv += [flag, str(g(key))]
         if g("target"):
             argv += ["--target", g("target")]
         if g("private") is True:

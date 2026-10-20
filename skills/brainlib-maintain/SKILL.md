@@ -17,6 +17,8 @@ description: 给大脑库做体检（断链、过期、冲突、缺说明），�
 | 缺说明 | 重要页面没有 description 或 read_when | 提议加一句说明和“什么时候读” |
 | 文件头读不懂 | 笔记开头的格式写错了 | 提议改正 |
 | 库里有密码 | 见 `skills/brainlib-privacy/SKILL.md` | 请用户挪进密码管理器 |
+| 可能过时 | 同一篇笔记里有两行字面很像、说话时间不同 | 新的那行算数；问用户要不要删旧的，同意了就 `brainlib propose remove_line <路径> --line "旧行里的几个词" --reason "后来说法变了"` |
+| 可能过时 | 同一篇笔记里有两行字面很像、说话时间不同 | 新的那行算数；问用户要不要删旧的，同意了就 `brainlib propose remove_line <路径> --line "旧行里的几个词" --reason "后来说法变了"` |
 
 不想现在处理：`brainlib next --snooze health`，一周后再提醒。
 
@@ -30,6 +32,9 @@ description: 给大脑库做体检（断链、过期、冲突、缺说明），�
 | L3 存档 | 旧东西、两周以前的日记 | `_archive/` 里的笔记 | 按用户第 4 题的设置 |
 
 笔记没写 tier 时，brainlib 自己推断，不会改文件。想固定下来，就提议在笔记开头加 `tier: L1` 这样一行。
+
+每条记录也分层：核心页里的行，以及刚记下、还没整理、标了重要的记录算 L0；其他还没整理的记录算 L1；
+整理进普通笔记的和两周内的日志算 L2；存档里的和两周前的日志算 L3。新的先露在索引上面，旧的往下沉，L3 不进索引，但 `find` 和按条件筛选时仍然找得到。详见 `docs/records.md`。
 
 ## 笔记开头的字段
 
@@ -52,8 +57,10 @@ sensitivity: internal  # public / internal / private / secret
 
 ## 查找
 
-- `brainlib index`：给 AI 看的阅读指南，最重要的页排在前面。
-- `brainlib find "主题"`：按主题找笔记。
+- `brainlib index`：给 AI 看的阅读指南，长度固定。依次是核心页、还没整理的重要记录、入口页、最近 7 天的日志、按说话时间排的最近记录、可能过时的说法。
+- `brainlib index --category 决定 --since 2026-10-01 --sort importance`：带条件时列出记录。能按说话时间、重要性、分类、私密等级、层级排序，按分类、重要性、日期、层级筛选。
+- `brainlib log --day 2026-10-20`：看某一天说了什么；不带 `--day` 时看最近 7 天。
+- `brainlib find "主题"`：按主题找笔记，单个汉字也能搜。
 - `brainlib read <路径>`：读一篇。
 
 ## 归档

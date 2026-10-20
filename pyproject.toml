@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "brainlib"
-version = "0.1.5"
+version = "0.2.0"
 description = "A personal knowledge library that any AI agent can use safely: plain Markdown, approvals, provenance and an encrypted vault."
 readme = "README.en.md"
 requires-python = ">=3.9"

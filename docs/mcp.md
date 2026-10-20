@@ -48,8 +48,10 @@ Windows:
 | kb_agent_check | `brainlib agent-check` |
 | kb_lang | `brainlib lang` |
 | kb_doctor | `brainlib doctor` |
-| kb_find / kb_read / kb_index / kb_health | `find` / `read` / `index` / `health` |
-| kb_note | `brainlib note` (`provenance`: said, judgment, extracted, inferred, guess, external; `private`: true for a topic the user marked sensitive; `now` with `target`: make the suggested change right away) |
+| kb_find / kb_read / kb_health | `find` / `read` / `health` |
+| kb_index | `brainlib index`; with any of `sort`, `category`, `importance`, `since`, `until`, `level`, `privacy`, `limit`, `all` it lists records instead of the guide |
+| kb_log | `brainlib log` (`day`: one day, YYYY-MM-DD; `days`: the last N days) |
+| kb_note | `brainlib note` (`provenance`: said, judgment, extracted, inferred, guess, external; `said_at`: "YYYY-MM-DD HH:MM"; `category`: me, decisions, journal or a folder, in Chinese 关于我, 决定, 日记; `importance`: high, normal, low; `privacy`: normal, private, confidential, secret; `replaces`: words of the older statement; `private`: true for a topic the user marked sensitive; `now` with `target`: make the suggested change right away) |
 | kb_onboard | `brainlib onboard` |
 | kb_classify | `brainlib classify` |
 | kb_proposals | `brainlib review` |

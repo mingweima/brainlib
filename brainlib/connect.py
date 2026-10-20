@@ -171,6 +171,9 @@ def remove(key):
     if not had:
         return {"tool": key, "file": str(path), "changed": False, "backup": None}
     backup = _backup(path, key)
+    if not new.strip():
+        path.unlink()
+        return {"tool": key, "file": str(path), "changed": True, "deleted": True, "backup": str(backup) if backup else None}
     atomic_write(path, new)
     return {"tool": key, "file": str(path), "changed": True, "backup": str(backup) if backup else None}
 

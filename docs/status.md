@@ -1,14 +1,15 @@
-# v0.1.5 现状 / Status
+# v0.2.0 现状 / Status
 
 ## 能用的 / Works
 
-- 命令行工具包括 `next`、`agent-check`、`lang`、`doctor`、`connect`、`init`、`adopt`、`scan`、`index`、`find`、`read`、`health`、
+- 命令行工具包括 `next`、`agent-check`、`lang`、`doctor`、`connect`、`init`、`adopt`、`scan`、`index`、`log`、`find`、`read`、`health`、
   `note`、`inbox`、`classify`、`propose`、`review`、`apply`、`reject`、`defer`、`undo`、`onboard`、`privacy scan`、
   `hooks install`、`vault`、`mcp`、`selftest`、`help`。
 - 能接上用户的 AI 工具。在 Claude Code、Codex、Gemini CLI、Windsurf 的全局说明文件里加几行（有标记，可撤回，先备份）；
   Cursor、Trae 等只能在设置里改的，给出文字请用户粘贴。这样每个新对话都会先运行 `brainlib next`。
 - 10 道开场选择题，带复查日期、信号和历史；答案决定权限、记录范围、隐私处理、审阅节奏和提问方式。
 - 来源六级标记；按用户设置拦截不该记的类型。
+- 每条记录带说话时间（精确到分钟）、分类、重要性、私密等级，记录也分 L0 到 L3。`index` 长度固定，带条件时能按任一标签排序和筛选；每条记录按说话时间写进当天的日志，`log` 按天看；同一件事以最新的说法为准。见 [records.md](records.md)。
 - 刚记下、还没整理进笔记的内容，`find` 和 `index` 马上就能查到，带着来源标记；私密的不出现。
 - 提案、审批、收据、备份和撤销；L0/L1 永远要用户同意；`--user-said` 只收用户对这条修改的回答，照抄要记的原话会被拒绝；保留 CRLF 换行。
 - 隐私方面，私密笔记不出现在任何输出里；拒存密码、密钥、银行卡号、身份证号，笔记里原有的这类内容拿给 AI 时遮住；age 保险箱；发布扫描和放行清单；git 钩子。
@@ -20,8 +21,10 @@
 
 - 在 Windows 上实际装起来用一遍。
 - 隐私的硬的一层，比如钥匙要本人在场才能用、出口门禁、保险箱文件名加密，见 [roadmap.md](roadmap.md)。v0.1 的保险箱靠口令，是可选的。
-- 语义搜索（v0.1 是关键词和中文双字匹配）。
-- 规则分类只看字词重合，归类比较粗，没把握时放进 `inbox-unsorted.md` 等用户整理。AI 记录时用 `--target` 指明该放哪篇，会准得多。
+- 语义搜索。现在是关键词匹配，中文按两个字一组，单个汉字按包含匹配，同义词查不到。
+- 规则分类只看字词重合，归类比较粗，没把握时放进 `inbox-unsorted.md` 等用户整理。AI 记录时用 `--category` 或 `--target` 指明该放哪里，会准得多。
+- 字面不像的矛盾说法认不出来，比如「回复别超过三段」和「越详细越好」，要靠 AI 记录时加 `--replaces`。
+- 隐私加强往后放，包括漏加 `--private` 时的补救和更多密钥格式，见 [roadmap.md](roadmap.md)。
 - 通过提案移动或删除文件。
 - 从 Notion、Apple 备忘录、ChatGPT 记忆等直接导入。
 - 多助手的角色分工与裁剪。档位 4 目前只多了 MCP 和自定义检查，接上的每个助手都能看到整个库，私密部分除外。
@@ -30,6 +33,29 @@
 - 技能说明目前以中文为主，英文版只有 `AGENTS.en.md` 和 `README.en.md`。
 
 ## 更新记录 / Changes
+
+### v0.2.0（2026-10-20）
+
+- 每条记录带四个标签：说话时间（精确到分钟）、分类、重要性、私密等级。`note` 新加 `--category`、`--importance`、`--privacy`，`--said-at` 可以写到分钟，没写的由 brainlib 推断。机密只进保险箱，绝密一律不存。
+  Every record carries four tags: when it was said (to the minute), category, importance and privacy level. `note` gains `--category`, `--importance` and `--privacy`, and `--said-at` takes a time; anything left out is inferred. Confidential items only go into the vault; secret ones are never stored.
+- 记录像页面一样分 L0 到 L3。`index` 长度固定，依次列核心页、还没整理的重要记录、入口页、最近 7 天的日志、按说话时间排的最近记录、可能过时的说法；带上条件时改为列记录，能按任一标签排序和筛选。
+  Records get tiers like pages. `index` has a fixed length: core pages, important records not filed yet, entry pages, the last 7 days of journal, recent records by when they were said, and lines that may be out of date. With filters it lists records, sorted and filtered by any tag.
+- 每日日志。整理时每条记录按说话时间插进那一天的 `journal/<日期>.md`，补记的旧话插到它自己那天。新的日记文件头写 `type: Journal`，标题和创建日期都是那一天。新命令 `brainlib log` 按天看记录。
+  Daily log. Organising puts every record into the journal of the day it was said, in time order. New journal files get `type: Journal` with that day as title and creation date. The new `brainlib log` shows records by day.
+- 同一件事以最新的说法为准。`note --replaces "<旧说法里的几个词>"` 生成替换一行的建议，旧说法留在新行末尾的括号里；用户把老偏好再说一遍时，笔记不重复，只在日志里记下新的时间；`health` 和索引会列出同一篇里字面很像、日期不同的几行。新加的 `propose replace_line` 和 `remove_line` 可以改掉或删掉一行。
+  The newest statement counts. `note --replaces "<old words>"` makes a replace-line proposal that keeps the old wording in brackets; restating an old preference adds nothing to the note and logs the new time; `health` and the index list look-alike lines with different dates. The new `propose replace_line` and `remove_line` change or remove one line.
+- 整理时每条记录单独一条建议，可以收一部分、拒一部分。分类是「决定」的记录进 `decisions.md`，第一次用到时建。规则分类不再把东西放进入口页（L1），first、第一、不确定这类词不再算主题词。
+  Each record now gets its own proposal, so the user can take some and leave others. Decisions go to `decisions.md`, created on first use. The rules classifier no longer files things into entry pages (L1) and ignores words like "first" or 不确定.
+- `find` 能搜单个汉字。
+  `find` matches single Chinese characters.
+- 日常规则加了几条：每行开头是说话时间，新旧冲突时信最新的；改主意时加 `--replaces`；对话快结束时把定下的事和偏好一件一条记下来，闲聊不记。中文用户另有一份说人话的规矩 `skills/brainlib-writing/SKILL.md`，日常规则和库里的 `AGENTS.md` 都指向它。
+  The daily rules now say that each line starts with when it was said and the newest one counts, to use `--replaces` for a change of mind, and to note decisions and preferences near the end of a conversation, skipping small talk. Chinese users also get a writing guide, `skills/brainlib-writing/SKILL.md`, which the daily rules and the library's `AGENTS.md` point to.
+- MCP 的 `kb_note` 和 `kb_index` 支持新参数，新工具 `kb_log`。
+  MCP: `kb_note` and `kb_index` take the new parameters; there is a new `kb_log` tool.
+- 几处小修。自测没过时 `agent-check finish` 退出码是 1；终端里逐条审阅有中文提示，按 Ctrl-D 不再报错；`connect --remove` 删完以后文件空了就删掉文件（有备份）；开场题结束语写对了每题隔多久再确认。
+  Small fixes: `agent-check finish` exits with 1 when the check fails; interactive review speaks Chinese and no longer crashes on Ctrl-D; `connect --remove` deletes the file when nothing else is left in it (a backup is kept); the onboarding outro gives the right recheck intervals.
+- 旧库不用迁移，旧的来源标记照样认。
+  Existing libraries need no migration; old source labels still read.
 
 ### v0.1.5（2026-10-20）
 

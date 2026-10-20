@@ -261,7 +261,12 @@ def _resolve_links(entries):
 
 def scan_library(lib, write=True):
     """Scan every note. Returns the full scan result (including private entries in memory only)."""
+    from . import records
+
+    lang = records.lib_lang(lib)
     entries = []
+    page_recs = []
+    hidden_recs = 0
     for rel in iter_notes(lib):
         full = lib.root / rel
         try:
@@ -278,14 +283,25 @@ def scan_library(lib, write=True):
             e["not_utf8"] = True
         e["_secret_hits"] = [h.as_dict() for h in privacy.scan_text(text, kinds=("secret",))]
         entries.append(e)
+        if not privacy.is_readable_by_agents(e["sensitivity"]):
+            hidden_recs += len(records.parse_lines(text))
+        elif e["authority"] != "pointer" and not not_utf8:
+            page_recs.extend(records.page_records(lib, e, privacy.redact(text), lang))
     broken = _resolve_links(entries)
     reports = _reports(lib, entries, broken)
+    reports["outdated"] = [
+        {"path": p["path"], "older_line": p["older"]["line"], "older_said": p["older"]["when"],
+         "newer_line": p["newer"]["line"], "newer_said": p["newer"]["when"]}
+        for p in records.outdated_pairs(page_recs)
+    ]
     result = {
         "generated_at": now_iso(),
         "brainlib_version": __version__,
         "library": lib.name,
         "entries": entries,
         "reports": reports,
+        "records": page_recs,
+        "records_hidden": hidden_recs,
     }
     if write:
         write_outputs(lib, result)
@@ -367,6 +383,15 @@ def write_outputs(lib, result):
     reports["generated_at"] = result["generated_at"]
     reports["contains_content"] = False
     write_json(lib.out("reports.json"), reports)
+    write_json(
+        lib.out("records.json"),
+        {
+            "schema": "brainlib/records@0.1",
+            "generated_at": result["generated_at"],
+            "records": result.get("records") or [],
+            "private_hidden": {"private": result["records_hidden"]} if result.get("records_hidden") else {},
+        },
+    )
     atomic_write(lib.out("llms.txt"), render_guide(lib, visible, hidden, result["generated_at"]), private=True)
     newest = 0.0
     for e in entries:
@@ -377,7 +402,8 @@ def write_outputs(lib, result):
     write_json(lib.out("scan-meta.json"), {"generated_at": result["generated_at"], "newest_mtime": newest, "notes": len(entries)})
 
 
-def render_guide(lib, visible, hidden, generated_at):
+def render_guide(lib, visible, hidden, generated_at, after_core=None, after_entry=None):
+    """The reading guide. `after_core` and `after_entry` are extra lines (record sections) to insert."""
     lines = [
         "# %s: reading guide for AI agents" % lib.name,
         "",
@@ -403,9 +429,15 @@ def render_guide(lib, visible, hidden, generated_at):
         lines.append("## Core pages (L0): read these before acting for the user")
         lines.extend(fmt(e) for e in core)
         lines.append("")
+    if after_core:
+        lines.extend(after_core)
+        lines.append("")
     if entry:
         lines.append("## Entry pages (L1)")
         lines.extend(fmt(e) for e in entry)
+        lines.append("")
+    if after_entry:
+        lines.extend(after_entry)
         lines.append("")
     if not core:
         lines.append("No core pages (L0) are marked yet. Ask the user which few notes matter most, then propose adding `tier: L0` to them.")
@@ -467,10 +499,12 @@ STOPWORDS = frozenset(
         "doing for from had has have having he her here hers him his how if in into is it its just me more most my "
         "no nor not now of off on once only or other our out over own please same she should so some such than that "
         "the their them then there these they this those through to too under until up us very was we were what "
-        "when where which while who whom why will with would you your remember"
+        "when where which while who whom why will with would you your remember first second last sure unsure "
+        "maybe think want really"
     ).split()
     + "这个 那个 这些 那些 什么 怎么 一下 一个 我们 你们 他们 的时 时候 之前 之后 不是 就是 还是 可以 没有 已经 "
-    "因为 所以 如果 但是 然后 帮我 记一 记住 记得 我的 你的 一些 有点".split()
+    "因为 所以 如果 但是 然后 帮我 记一 记住 记得 我的 你的 一些 有点 第一 一次 确定 不确 要不 不要 觉得 可能 "
+    "也许 想要 现在 今天 明天 昨天 以后 其实 真的".split()
 )
 
 
@@ -480,20 +514,35 @@ def _content_tokens(text, fallback=True):
     return (words - STOPWORDS) or (words if fallback else set())
 
 
+_CJK_CHAR = re.compile(r"^[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]$")
+
+
+def _split_query(query):
+    """Query words, with single CJK characters kept apart: they match anywhere inside a word."""
+    q = _content_tokens(query)
+    singles = {t for t in q if _CJK_CHAR.match(t)}
+    return q - singles, singles
+
+
+def _hits(words, singles, text):
+    text = text or ""
+    return len(words & _tokens(text)) + sum(1 for ch in singles if ch in text.lower())
+
+
 def find(lib, query, limit=10):
     """Rank visible notes for a task or topic. Never returns private notes."""
     index = load_index(lib)
-    q = _content_tokens(query)
-    if not q:
+    q, singles = _split_query(query)
+    if not q and not singles:
         return []
     results = []
     for e in index["notes"]:
         score = 0.0
-        score += 3 * len(q & _tokens(" ".join(e.get("read_when") or [])))
-        score += 2 * len(q & _tokens(e.get("title")))
-        score += 2 * len(q & _tokens(" ".join(e.get("tags") or [])))
-        score += 1.5 * len(q & _tokens(e.get("description")))
-        score += 1 * len(q & _tokens(e.get("path")))
+        score += 3 * _hits(q, singles, " ".join(e.get("read_when") or []))
+        score += 2 * _hits(q, singles, e.get("title"))
+        score += 2 * _hits(q, singles, " ".join(e.get("tags") or []))
+        score += 1.5 * _hits(q, singles, e.get("description"))
+        score += 1 * _hits(q, singles, e.get("path"))
         if score <= 0:
             continue
         if e["tier"] == "L0":
@@ -510,7 +559,7 @@ def find(lib, query, limit=10):
                 body = (lib.root / e["path"]).read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            hits = len(q & _tokens(body))
+            hits = _hits(q, singles, body)
             if hits:
                 results.append((0.5 * hits, e))
     results.sort(key=lambda x: (-x[0], x[1]["path"]))
@@ -519,18 +568,19 @@ def find(lib, query, limit=10):
 
 def find_noted(lib, query, limit=5):
     """Inbox items that match the query but are not in any note yet (newest first among equals)."""
-    from . import inbox
+    from . import inbox, records
 
-    q = _content_tokens(query)
-    if not q:
+    q, singles = _split_query(query)
+    if not q and not singles:
         return []
+    lang = records.lib_lang(lib)
     hits = []
     for it in inbox.not_filed_for_agents(lib):
-        n = len(q & _tokens(it["text"]))
+        n = _hits(q, singles, it["text"])
         if n:
             hits.append((n, it))
     hits.sort(key=lambda x: -x[0])
     return [
-        {"id": it["id"], "line": inbox.describe(it), "provenance": it["provenance"], "status": it["status"]}
+        {"id": it["id"], "line": inbox.describe(it, lang), "provenance": it["provenance"], "status": it["status"]}
         for _n, it in hits[:limit]
     ]

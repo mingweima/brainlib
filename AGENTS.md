@@ -78,6 +78,8 @@ GitHub 打不开时，请用户换个网络，或者请别人把压缩包发给�
 5. **偏好会变。** 用户说的话和他之前的选择对不上时，运行
    `brainlib onboard signal <题号> "用户原话"`；用户明确要改，直接 `brainlib onboard answer <题号> <新选项>`。
 6. **拿不准就问。** 运行 `brainlib next`，或者出一道选择题问用户。
+7. **同一件事以最新的为准。** 每条记录都带说话时间，新旧说法冲突时信最新的。用户改了主意，记新说法时加 `--replaces "<旧说法里的几个词>"`。
+8. **说人话。** 用中文回复用户、往库里写东西时，照 `skills/brainlib-writing/SKILL.md` 写。结论放在开头，句子写完整，不用黑话。
 
 ## 出错时
 
@@ -89,6 +91,7 @@ GitHub 打不开时，请用户换个网络，或者请别人把压缩包发给�
 
 - 每项任务的详细步骤在 `skills/` 下：`brainlib-setup`（安装和权限）、`brainlib-onboarding`（10 道题）、
   `brainlib-capture`（记录）、`brainlib-organize`（整理和审批）、`brainlib-privacy`（隐私和保险箱）、
-  `brainlib-maintain`（体检和查找）。照 `brainlib next` 做时一般用不到它们，遇到细节问题再看；`next` 或 `doctor` 指到哪个文件，就去读那个文件。
+  `brainlib-maintain`（体检和查找）、`brainlib-writing`（说人话，只有中文）。照 `brainlib next` 做时一般用不到它们，遇到细节问题再看；`next` 或 `doctor` 指到哪个文件，就去读那个文件。
+- 记录的四个标签、分层索引、每日日志和以新为准的规则：见 [docs/records.md](docs/records.md)。
 - 用 MCP 接入（例如 Claude Desktop）：见 [docs/mcp.md](docs/mcp.md)。
 - 笔记格式、来源标记等规格：见 `spec/`。

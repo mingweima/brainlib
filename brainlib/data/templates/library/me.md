@@ -9,7 +9,8 @@ read_when: [before acting on my behalf, before giving me advice, when unsure wha
 # About me
 
 Agents: add to this page only through proposals, only from things I said or wrote, and
-mark each line with where it came from, for example `[said 2026-01-31]`.
+mark each line with where it came from and when I said it, for example `[said 2026-01-31 09:42]`.
+For the same matter, the newest line counts.
 
 ## Basics
 

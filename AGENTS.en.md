@@ -77,6 +77,7 @@ Once the tools are connected, every new conversation in them starts by running `
 5. **Preferences change.** When what the user says does not match their earlier choices, run
    `brainlib onboard signal <question-id> "user's exact words"`; if the user explicitly wants to change an answer, run `brainlib onboard answer <question-id> <new-option>` directly.
 6. **When in doubt, ask.** Run `brainlib next`, or ask the user a multiple-choice question.
+7. **The newest statement counts.** Every record carries when it was said; when old and new statements disagree, go by the newest. When the user changes their mind, add `--replaces "<a few words of the old statement>"` to the new note.
 
 ## When Errors Happen
 
@@ -88,6 +89,7 @@ If you try two different ways to fix the same error and neither works, stop and 
 
 - Detailed steps for each task are in `skills/`: `brainlib-setup` (installation and permissions), `brainlib-onboarding` (the 10 questions),
   `brainlib-capture` (recording notes), `brainlib-organize` (organizing and approval), `brainlib-privacy` (privacy and vault),
-  and `brainlib-maintain` (health checks and search). You usually do not need them while following `brainlib next`; read them when you run into detailed questions, and whenever `next` or `doctor` points you to a file, read that file.
+  `brainlib-maintain` (health checks and search), and `brainlib-writing` (a writing guide for Chinese replies, Chinese only). You usually do not need them while following `brainlib next`; read them when you run into detailed questions, and whenever `next` or `doctor` points you to a file, read that file.
+- Record tags, the tiered index, the daily log and the newest-wins rule: see [docs/records.md](docs/records.md).
 - To connect via MCP (for example, in Claude Desktop): see [docs/mcp.md](docs/mcp.md).
 - Specifications for note formats, source tags, and more: see `spec/`.
