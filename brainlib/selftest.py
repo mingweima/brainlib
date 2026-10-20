@@ -15,8 +15,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from . import __version__
-
 
 def _sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -50,7 +48,7 @@ class _Run:
 
 
 def run(verbose=False):
-    from . import agentcheck, config, mcp
+    from . import agentcheck, config, mcp, update
 
     tmp = Path(tempfile.mkdtemp(prefix="brainlib-selftest-"))
     names = (
@@ -199,9 +197,7 @@ def run(verbose=False):
 
         feed = tmp / "release.json"
         feed.write_text(json.dumps({"tag_name": "v99.0.0"}), encoding="utf-8")
-        gs = config.global_state()
-        gs["update"] = {"seen_version": __version__}
-        config.save_global_state(gs)
+        update.remember_version()
         os.environ["BRAINLIB_UPDATE_FEED"] = str(feed)
         os.environ.pop("BRAINLIB_NO_UPDATE_CHECK", None)
         try:

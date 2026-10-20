@@ -64,8 +64,8 @@ Run one brainlib command at a time. Wait for it to finish and read its output be
 10 multiple-choice questions to get to know the user → connect the AI tools the user works with → daily note-taking and organization. Ask the user only one question at a time, and never answer on the user's behalf.
 Once the tools are connected, every new conversation in them starts by running `brainlib next`, so the library keeps being read and kept up to date. Until the user picks a language, the lines brainlib gives you to say come in both Chinese and English; say the one in the language the user wrote to you in.
 
-`brainlib next` checks GitHub for a new release at most once a day. When its output starts with `UPDATE:`, run `brainlib update`
-first, without asking the user; a user who doesn't want automatic updates will have you run `brainlib update --off`. Afterwards,
+`brainlib next` checks GitHub for a new release at most once a day. When one is out, the step `next` gives you is `brainlib update`;
+run it without asking the user. A user who doesn't want automatic updates will have you run `brainlib update --off`. Afterwards,
 tell the user in one or two sentences what changed, going by its output, then run `brainlib next` again, since the new version's rules may differ.
 
 ## Seven Iron Rules

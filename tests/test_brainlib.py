@@ -17,6 +17,7 @@ import unittest
 import zipfile
 from datetime import timedelta
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -66,6 +67,7 @@ class Base(unittest.TestCase):
         os.environ["BRAINLIB_NO_UPDATE_CHECK"] = "1"
         for k in ("BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_PRIVATE_WORDS", "BRAINLIB_UPDATE_FEED"):
             os.environ.pop(k, None)
+        update.remember_version()
         self.root = self.tmp / "lib"
         self.root.mkdir()
 
@@ -647,25 +649,58 @@ class UpdateTests(Base):
         self.assertTrue(update._official("https://github.com/%s/" % update.REPO))
         self.assertFalse(update._official("https://github.com/someone/brainlib.git"))
 
-    def test_next_says_once_a_day_when_a_release_is_out_and_can_be_told_not_to(self):
+    def test_a_new_release_is_the_next_step_once_and_can_be_turned_off(self):
         self.cli("init", str(self.root))
         os.environ.pop("BRAINLIB_NO_UPDATE_CHECK")
         self.feed("v99.0.0")
-        code, out = self.cli("next", "--library", str(self.root))
-        self.assertIn("UPDATE: brainlib 99.0.0 is out", out)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertIn("NEXT: Update brainlib before anything else.", out)
+        self.assertIn("brainlib 99.0.0 is out", out)
         self.assertIn("RUN: brainlib update", out)
+        self.assertNotIn("self-check", out)
         self.assertNotIn("UPDATED:", out)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertIn("NOTE: brainlib 99.0.0 is out", out)
+        self.assertIn("self-check", out)
         self.feed("v0.0.1")
         self.assertIn("99.0.0 is out", self.cli("next", "--library", str(self.root))[1])
         self.assertIn("UP TO DATE", self.cli("update", "--check")[1])
-        self.assertNotIn("UPDATE:", self.cli("next", "--library", str(self.root))[1])
+        self.assertNotIn("is out", self.cli("next", "--library", str(self.root))[1])
         self.feed("v99.0.0")
         self.cli("update", "--off")
         gs = config.global_state()
         gs["update"]["checked_at"] = "2020-01-01T00:00:00+00:00"
         config.save_global_state(gs)
-        self.assertNotIn("UPDATE:", self.cli("next", "--library", str(self.root))[1])
+        self.assertNotIn("is out", self.cli("next", "--library", str(self.root))[1])
         self.assertIn("AVAILABLE: brainlib 99.0.0", self.cli("update", "--check")[1])
+        self.assertEqual(mcp._argv_for("kb_update", {"off": True}, None), ["update", "--off"])
+        self.assertEqual(mcp._argv_for("kb_update", {"on": True}, None), ["update", "--on"])
+
+    def test_each_copy_of_the_program_remembers_its_own_version(self):
+        self.cli("init", str(self.root))
+        gs = config.global_state()
+        gs["update"]["seen"]["/another/copy"] = "99.0.0"
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertNotIn("RESTART", out)
+        self.assertIn("self-check", out)
+        gs = config.global_state()
+        gs["update"]["seen"][str(update.PROGRAM_DIR)] = "0.1.0"
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertIn("UPDATED: brainlib is now %s (it was 0.1.0)" % update.__version__, out)
+        self.assertNotIn("self-check", out)
+        self.assertIn("self-check", self.cli("next", "--library", str(self.root))[1])
+        self.feed("v99.0.0")
+        with mock.patch.object(update, "_version_in", return_value="99.0.0"):
+            self.assertIn("RESTART: brainlib 99.0.0 is installed", self.cli("next", "--library", str(self.root))[1])
+            self.assertIn("this computer has brainlib 99.0.0", self.cli("update", "--check")[1])
+
+    def test_agents_files_name_a_command_a_fresh_terminal_can_run(self):
+        cli._python()
+        with mock.patch.object(cli.shutil, "which", return_value=None):
+            text = cli.agents_text(self.root, "en")
+        self.assertIn('brainlib.py" next --library', text)
 
     def test_a_release_zip_replaces_the_program_after_a_backup(self):
         prog = self.tmp / "prog"
@@ -681,6 +716,25 @@ class UpdateTests(Base):
                 update.update_folder(prog, "v0.3.0", "0.3.0", archive=archive)
         self.assertEqual(update._version_in(prog), "0.2.0")
         self.assertFalse((self.tmp / "evil.py").exists())
+
+    def test_a_failed_copy_puts_the_old_program_back(self):
+        prog = self.tmp / "prog"
+        self.program(prog, "0.1.0")
+        real, calls = update._copy_over, []
+
+        def flaky(src, dest):
+            calls.append(src)
+            if len(calls) == 1:
+                (Path(dest) / "brainlib" / "half.py").write_text("x\n", encoding="utf-8")
+                raise OSError("No space left on device")
+            return real(src, dest)
+
+        with mock.patch.object(update, "_copy_over", flaky):
+            with self.assertRaises(BrainError) as e:
+                update.update_folder(prog, "v0.2.0", "0.2.0", archive=self.release_zip("ok.zip", "0.2.0"))
+        self.assertIn("put back", e.exception.message)
+        self.assertEqual(update._version_in(prog), "0.1.0")
+        self.assertFalse((prog / "brainlib" / "half.py").exists())
 
     @unittest.skipUnless(shutil.which("git"), "git is not installed")
     def test_a_git_checkout_only_fast_forwards_to_the_release(self):
@@ -721,7 +775,12 @@ class UpdateTests(Base):
         self.assertEqual(r["rebuilt"], 2)
         self.assertEqual((self.root / "AGENTS.md").read_text(encoding="utf-8"), cli.agents_text(self.root, "en"))
         self.assertEqual((mine / "AGENTS.md").read_text(encoding="utf-8"), edited)
-        self.assertEqual(config.global_state()["update"]["seen_version"], update.__version__)
+        self.assertEqual(update.seen_version(), update.__version__)
+        self.assertEqual(len(list((Path(os.environ["BRAINLIB_HOME"]) / "backups" / "agents").glob("*.md"))), 1)
+        template = 'Run {BRAINLIB_CMD} next --library "{LIBRARY}"\nAlso "{LIBRARY}"\n'
+        self.assertTrue(update._made_from('Run b next --library "/a"\nAlso "/a"\n', template))
+        self.assertFalse(update._made_from('Run b next --library "/a"\nAlso "/b"\n', template))
+        self.assertFalse(update._made_from('Run b next --library "/a"\nRun b next --library "/c"\nAlso "/a"\n', template))
 
 
 class ConnectTests(Base):

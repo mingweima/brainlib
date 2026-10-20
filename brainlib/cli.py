@@ -192,7 +192,7 @@ def agents_text(root, lang):
     """The AGENTS.md brainlib writes into a library folder."""
     name = "AGENTS.zh.md" if lang == "zh" and (TEMPLATES / "AGENTS.zh.md").is_file() else "AGENTS.md"
     text = (TEMPLATES / name).read_text(encoding="utf-8")
-    text = text.replace("{BRAINLIB_CMD}", brainlib_cmd()).replace("{LIBRARY}", str(Path(root).resolve()))
+    text = text.replace("{BRAINLIB_CMD}", standalone_cmd()).replace("{LIBRARY}", str(Path(root).resolve()))
     return text.replace("{WRITING_SKILL}", str(nextstep.WRITING_SKILL))
 
 
@@ -299,13 +299,17 @@ def cmd_next(args):
         return EXIT_OK
     lang = _lang(args, lib)
     lang_chosen = bool(i18n.normalize(config.global_state().get("lang")) or (lib and i18n.normalize(lib.config.get("lang"))))
-    notices, info = update.on_next(lang)
-    s = nextstep.preflight(_actor(args), lang, lang_chosen)
+    up = update.on_next(lang)
+    if up["instead"]:
+        _emit(args, {"key": "updated", "text": up["instead"], "notices": up["notices"]}, "\n".join(up["notices"] + [up["instead"]]))
+        return EXIT_OK
+    s = nextstep.update_step(up["offer"]) if up["offer"] else nextstep.preflight(_actor(args), lang, lang_chosen)
     if s is None:
         s = nextstep.no_library(lang) if lib is None else nextstep.compute(lib, lang=lang)
+    info = up["info"]
     if info and info["available"]:
         s["update"] = {"latest": info["latest"], "current": info["current"], "run": "brainlib update"}
-    _emit(args, dict(s, notices=notices), "\n".join(notices + [nextstep.render(s)]))
+    _emit(args, dict(s, notices=up["notices"]), "\n".join(up["notices"] + [nextstep.render(s)]))
     return EXIT_OK
 
 
@@ -330,13 +334,16 @@ def cmd_update(args):
         )
         return EXIT_FINDINGS
     if not info["available"]:
-        print("UP TO DATE: brainlib %s is the latest release.\nTHEN: run `brainlib next` again." % __version__)
+        print(
+            "UP TO DATE: this computer has brainlib %s, and the latest release is %s.\nTHEN: run `brainlib next` again."
+            % (info["installed"], info["latest"])
+        )
         return EXIT_OK
     if args.check:
         off = update.checks_off()
         print(
             "AVAILABLE: brainlib %s is out (this computer has %s).%s\nRUN: brainlib update"
-            % (info["latest"], __version__, " Automatic checks are off: %s." % off if off else "")
+            % (info["latest"], info["installed"], " Automatic checks are off: %s." % off if off else "")
         )
         return EXIT_OK
     done = update.install({"version": info["latest"], "tag": info["tag"]})

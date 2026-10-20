@@ -13,9 +13,11 @@ run `brainlib update`, which does what fits how brainlib was installed:
 The new version then adapts what the old one set up: it rebuilds every library's index, refreshes the
 brainlib lines it wrote into the user's tool instruction files, and rewrites a library AGENTS.md that
 an older brainlib wrote and nobody edited since. If the program changed some other way, the first
-`brainlib next` that runs the new code does the same.
+`brainlib next` that runs the new code does the same. Each copy of the program remembers its own
+version, so two copies sharing ~/.brainlib do not confuse each other.
 
 `brainlib update --off` stops the checks; so does the environment variable BRAINLIB_NO_UPDATE_CHECK=1.
+Adapting after a manual update still happens; it never goes online.
 """
 
 import http.client
@@ -39,7 +41,7 @@ API_LATEST = "https://api.github.com/repos/%s/releases/latest" % REPO
 RELEASES = "https://github.com/%s/releases" % REPO
 GIT_URL = "https://github.com/%s.git" % REPO
 ZIP_URL = "https://github.com/%s/archive/refs/tags/%%s.zip" % REPO
-CHECK_HOURS = 20
+CHECK_HOURS = 24
 PROGRAM_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = "brainlib/data/templates/library"
 AGENTS_TEMPLATES = ("AGENTS.md", "AGENTS.zh.md")
@@ -82,12 +84,30 @@ def set_auto(on):
     _save(st)
 
 
+def seen_version(st=None):
+    """The version this copy of the program last adapted to."""
+    st = _state() if st is None else st
+    return (st.get("seen") or {}).get(str(PROGRAM_DIR))
+
+
+def _set_seen(st, version):
+    seen = dict(st.get("seen") or {})
+    seen[str(PROGRAM_DIR)] = version
+    st["seen"] = seen
+
+
+def installed_version():
+    """The version in the program files now, which is newer than __version__ in a process started before an update."""
+    disk = _version_in(PROGRAM_DIR)
+    return disk if newer(disk, __version__) else __version__
+
+
 def remember_version():
     """A library set up by this version needs no adapting later; without this, a fresh install would look
     like an update from an unknown older version."""
     st = _state()
-    if not st.get("seen_version"):
-        st["seen_version"] = __version__
+    if not seen_version(st):
+        _set_seen(st, __version__)
         _save(st)
 
 
@@ -179,9 +199,10 @@ def check(force=False):
         st["checked_at"] = now_iso()
         _save(st)
     latest = st.get("latest")
-    installed = st.get("seen_version") if newer(st.get("seen_version"), __version__) else __version__
+    installed = installed_version()
     return {
         "current": __version__,
+        "installed": installed,
         "latest": latest,
         "tag": st.get("tag"),
         "available": newer(latest, installed),
@@ -324,8 +345,22 @@ def update_folder(program, tag, version, archive=None):
         got = _version_in(new)
         if got != version:
             raise BrainError("The download says it is brainlib %s, not %s, so nothing was changed." % (got or "nothing", version), fix="Run `brainlib update` again later.")
-        backup = _backup_program(program)
-        _copy_over(new, program)
+        try:
+            backup = _backup_program(program)
+        except OSError as e:
+            raise BrainError("Could not back up the current program (%s), so nothing was changed." % _first_line(str(e)), fix="Tell the user; check that the disk is not full.")
+        try:
+            _copy_over(new, program)
+        except OSError as e:
+            try:
+                _copy_over(backup, program)
+                after = "The old version was put back from the backup in %s." % backup
+            except OSError:
+                after = "Putting the old version back failed too; it is in %s." % backup
+            raise BrainError(
+                "Could not replace the program files (%s). %s" % (_first_line(str(e)), after),
+                fix="Tell the user. If brainlib no longer starts, copy everything in %s back into %s." % (backup, program),
+            )
     return backup
 
 
@@ -358,10 +393,17 @@ def run_adapt(program, old, backup=None):
 # --- adapting after an update ----------------------------------------------
 
 def _made_from(text, template):
-    """True when text is template with only its slots filled in, i.e. nobody edited it."""
-    parts = re.split("(%s)" % "|".join(re.escape(s) for s in SLOTS), template)
-    pattern = "".join("(.+?)" if p in SLOTS else re.escape(p) for p in parts)
-    return re.fullmatch(pattern, text, flags=re.S) is not None
+    """True when text is template with only its slots filled in, i.e. nobody edited it. A filled slot stays
+    within one line, and a slot used twice holds the same text both times."""
+    pattern, used = [], set()
+    for p in re.split("(%s)" % "|".join(re.escape(s) for s in SLOTS), template):
+        if p in SLOTS:
+            name = "s%d" % SLOTS.index(p)
+            pattern.append("(?P=%s)" % name if name in used else "(?P<%s>[^\n]+?)" % name)
+            used.add(name)
+        else:
+            pattern.append(re.escape(p))
+    return re.fullmatch("".join(pattern), text) is not None
 
 
 def _old_templates(old_program=None):
@@ -392,6 +434,8 @@ def _refresh_agents_file(lib, old_program):
         return None
     for name, template in _old_templates(old_program):
         if _made_from(text, template):
+            folder = ensure_private_dir(config.brainlib_home() / "backups" / "agents")
+            shutil.copy2(str(path), str(folder / ("%s-%s.md" % (lib.id, now().strftime("%Y%m%dT%H%M%S")))))
             atomic_write(path, agents_text(lib.root, "zh" if name.endswith(".zh.md") else "en"))
             return str(path)
     return None
@@ -464,8 +508,7 @@ def adapt(old=None, old_program=None):
             continue
     report["tool_files"] = _refresh_tool_files(roots)
     st = _state()
-    if not newer(st.get("seen_version"), __version__):
-        st["seen_version"] = __version__
+    _set_seen(st, __version__)
     st["last"] = {"from": old or None, "to": __version__, "at": now_iso()}
     _save(st)
     return report
@@ -484,7 +527,7 @@ def render_adapt(report, lang):
     for f in report["tool_files"]:
         lines.append("REFRESHED: the brainlib lines in %s (the old file was backed up)" % f)
     for f in report["agents_files"]:
-        lines.append("REFRESHED: %s (nobody had edited it)" % f)
+        lines.append("REFRESHED: %s (nobody had edited it; the old file was backed up)" % f)
     if report["rebuilt"]:
         lines.append("REBUILT: the index of %d librar%s" % (report["rebuilt"], "y" if report["rebuilt"] == 1 else "ies"))
     lines.append(
@@ -502,31 +545,37 @@ def render_adapt(report, lang):
 
 
 def on_next(lang):
-    """Lines for the top of `brainlib next`: finish an update made some other way, and say when a newer
-    release is out. Never raises; nothing here may keep the agent from its next step."""
-    if os.environ.get("BRAINLIB_NO_UPDATE_CHECK", "").strip() not in ("", "0"):
-        return [], None
-    lines, info = [], None
+    """What `brainlib next` has to say about updates, as {"instead": text to show instead of the step,
+    "offer": a newer release that becomes the step, "notices": lines to show above the step, "info": what
+    check() found}. A release becomes the step only the first time; after that it is a notice, so a
+    failing update never keeps the agent from its work. Never raises."""
+    out = {"instead": None, "offer": None, "notices": [], "info": None}
     try:
-        seen = _state().get("seen_version")
-        if newer(seen, __version__):
-            lines.append(
+        st = _state()
+        seen, disk = seen_version(st), installed_version()
+        if newer(disk, __version__):
+            out["notices"].append(
                 "RESTART: brainlib %s is installed, but this process still runs %s. Ask the user to restart the app "
-                "that runs brainlib (Claude Desktop, for example)." % (seen, __version__)
+                "that runs brainlib (Claude Desktop, for example)." % (disk, __version__)
             )
         elif seen != __version__:
             if seen or config.registry().get("libraries"):
-                lines.append(render_adapt(adapt(seen), lang))
-            else:
-                st = _state()
-                st["seen_version"] = __version__
-                _save(st)
-        info = check()
+                out["instead"] = render_adapt(adapt(seen), lang)
+                return out
+            _set_seen(st, __version__)
+            _save(st)
+        info = out["info"] = check()
         if info and info["available"]:
-            lines.append(
-                "UPDATE: brainlib %s is out (this computer has %s). Update before anything else; brainlib updates "
-                "itself unless the user turned that off, so do not ask first.\nRUN: brainlib update" % (info["latest"], __version__)
-            )
+            st = _state()
+            if st.get("offered") != info["tag"]:
+                st["offered"] = info["tag"]
+                _save(st)
+                out["offer"] = info
+            else:
+                out["notices"].append(
+                    "NOTE: brainlib %s is out, but this computer still has %s. After the step below, run `brainlib update`; "
+                    "if it does not work, tell the user what it said." % (info["latest"], info["installed"])
+                )
     except Exception:  # noqa: BLE001 - an update problem must never block the daily routine
-        return lines, info
-    return lines, info
+        return out
+    return out

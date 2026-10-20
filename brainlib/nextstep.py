@@ -63,6 +63,16 @@ def step(key, nxt, why, run=None, say=None, extra=None, snoozable=False):
     return {"key": key, "next": nxt, "why": why, "run": list(run or []), "say": say, "extra": extra, "snoozable": snoozable}
 
 
+def update_step(info):
+    return step(
+        "update",
+        "Update brainlib before anything else.",
+        "brainlib %s is out and this computer has %s. brainlib updates itself unless the user turned that off, "
+        "so do not ask first." % (info["latest"], info["installed"]),
+        run=["brainlib update"],
+    )
+
+
 def preflight(actor, lang, lang_chosen):
     """Steps that come before any library work: the agent self-check and the user's language."""
     st, last = agentcheck.state(actor)

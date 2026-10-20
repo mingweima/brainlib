@@ -5,7 +5,7 @@
 - 命令行工具包括 `next`、`agent-check`、`lang`、`doctor`、`connect`、`init`、`adopt`、`scan`、`index`、`log`、`find`、`read`、`health`、
   `note`、`inbox`、`classify`、`propose`、`review`、`apply`、`reject`、`defer`、`undo`、`onboard`、`privacy scan`、
   `hooks install`、`vault`、`mcp`、`update`、`selftest`、`help`。
-- 自动更新。`next` 每天最多向 GitHub 查一次最新的正式版，有新版本时 AI 运行 `update`；git 安装只快进，解压的文件夹先核对再备份，pip 安装给出命令。更新完新版本自己接手，可以关掉。
+- 自动更新。`next` 每天最多向 GitHub 查一次最新的正式版，有新版本时下一步就是 `update`；git 安装只快进，解压的文件夹先核对再备份，pip 安装给出命令。更新完新版本自己接手，可以关掉。
 - 能接上用户的 AI 工具。在 Claude Code、Codex、Gemini CLI、Windsurf 的全局说明文件里加几行（有标记，可撤回，先备份）；
   Cursor、Trae 等只能在设置里改的，给出文字请用户粘贴。这样每个新对话都会先运行 `brainlib next`。
 - 10 道开场选择题，带复查日期、信号和历史；答案决定权限、记录范围、隐私处理、审阅节奏和提问方式。
@@ -37,16 +37,16 @@
 
 ### v0.2.1（2026-10-20）
 
-- 自动更新。`brainlib next` 每天最多向 GitHub 查一次最新的正式版，有新版本时在最上面提示，AI 不用先问用户，直接运行新命令 `brainlib update`。git 克隆的只从官方仓库快进到发布标签，有本地改动就停；解压的文件夹下载发布包，核对版本号和路径，先把旧程序备份到 `~/.brainlib/backups/`，再覆盖；pip 装的给出 pip 命令。`brainlib update --off` 或环境变量 `BRAINLIB_NO_UPDATE_CHECK=1` 能关掉。MCP 新工具 `kb_update`。
-  Automatic updates. `brainlib next` checks GitHub for the latest release at most once a day and, when one is out, says so at the top; the AI runs the new `brainlib update` without asking first. A git clone is fast-forwarded to the release tag from the official repository, and stops on local changes; an unpacked folder gets the release zip, checked for its version and paths, after the old program is backed up to `~/.brainlib/backups/`; a pip install gets the pip command. Turn it off with `brainlib update --off` or `BRAINLIB_NO_UPDATE_CHECK=1`. New MCP tool `kb_update`.
-- 更新以后新版本自己接手。它会重建每个库的索引，刷新各工具说明里 brainlib 加的那几行（先备份），把旧版本写的、没人改过的库内 `AGENTS.md` 换成新的，再列出这次改了什么。手动 `git pull` 或换了文件夹也一样，下一次 `next` 时接手。
-  After an update the new version takes over: it rebuilds every library's index, refreshes the lines brainlib added to tool instructions (with a backup), replaces a library `AGENTS.md` that an older version wrote and nobody edited, and lists what changed. The same happens on the next `next` after a manual `git pull` or a replaced folder.
+- 自动更新。`brainlib next` 每天最多向 GitHub 查一次最新的正式版。有新版本时，`next` 给的这一步就是运行新命令 `brainlib update`，AI 不用先问用户；同一个版本再提时只在这一步上面提醒一句，更新出错也不会卡住别的事。git 克隆的只从官方仓库快进到发布标签，有本地改动就停；解压的文件夹下载发布包，核对版本号和路径，先把旧程序备份到 `~/.brainlib/backups/`，再覆盖，覆盖到一半出错就从备份放回去；pip 装的给出 pip 命令。`brainlib update --off` 或环境变量 `BRAINLIB_NO_UPDATE_CHECK=1` 能停掉检查。MCP 新工具 `kb_update`，也能关掉和打开自动更新。
+  Automatic updates. `brainlib next` checks GitHub for the latest release at most once a day. When one is out, the step `next` gives is the new `brainlib update`, which the AI runs without asking first; if the same release comes up again it is only a line above the step, so a failing update never holds up other work. A git clone is fast-forwarded to the release tag from the official repository, and stops on local changes; an unpacked folder gets the release zip, checked for its version and paths, after the old program is backed up to `~/.brainlib/backups/`, and is put back from the backup if copying fails halfway; a pip install gets the pip command. `brainlib update --off` or `BRAINLIB_NO_UPDATE_CHECK=1` stops the checks. New MCP tool `kb_update`, which can also turn automatic updates off and on.
+- 更新以后新版本自己接手。它会重建每个库的索引，刷新各工具说明里 `brainlib` 加的那几行，把旧版本写的、没人改过的库内 `AGENTS.md` 换成新的，换之前都先备份，再列出这次改了什么。手动 `git pull` 或换了文件夹也一样，下一次 `next` 时接手；停掉检查不影响这一步。每份程序各记各的版本，两份程序共用 `~/.brainlib` 也不会互相干扰。
+  After an update the new version takes over. It rebuilds every library's index, refreshes the lines `brainlib` added to tool instructions, replaces a library `AGENTS.md` that an older version wrote and nobody edited, backs each file up first, and lists what changed. The same happens on the next `next` after a manual `git pull` or a replaced folder, even with the checks stopped. Each copy of the program keeps its own version, so two copies sharing `~/.brainlib` don't confuse each other.
 - 旧说法还在缓存区、没整理进笔记时，`--replaces` 也认得出。整理时只有新说法进笔记，带上旧说法的括号；旧的那条标成已被替换，留在日志里，索引不再列它；它要是已经单独等着用户批，那条建议作废。以前这种情况两句都会进笔记。
   `--replaces` now also finds an older statement that is still in the buffer. Organizing files only the newer one, with the old wording in brackets; the older item is marked replaced, stays in the log and drops out of the index, and a proposal still waiting for it is withdrawn. Before, both lines went into the note.
 - README 开头用一两句话写明只有在电脑上才能用，安装那句话放进了能一键复制的代码块，正文里的 `brainlib` 都用代码字体；新加「机制和运行逻辑」一节，用流程图讲部件、写入、读取、`next` 的顺序和自动更新；「用起来是什么样」换成了学术和技术方面的例子，技能说明和 AI 自测题里的例子也一起换了。
   The README now says up front, in a sentence or two, that brainlib only works on a computer; the install sentence sits in a code block you can copy with one click, and `brainlib` is in code font throughout. It also gains a "How it works inside" section with flowcharts of the parts, writing, reading, the order `next` follows, and updates. The examples are now academic and technical, in the skill guides and the agent self-check too.
 - 小修。`AGENTS.md` 里「六条铁律」其实有八条（英文版七条），标题改对了。
-  Small fix: the "Six Iron Rules" heading sat over eight rules in the Chinese `AGENTS.md` and seven in the English one; both headings now give the right number.
+  Small fix. The "Six Iron Rules" heading sat over eight rules in the Chinese `AGENTS.md` and seven in the English one; both headings now give the right number.
 - 旧库不用迁移。
   Existing libraries need no migration.
 

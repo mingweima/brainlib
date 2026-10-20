@@ -175,7 +175,7 @@ flowchart LR
     F --> RD["read one note"]
 ```
 
-- Pages come in four tiers: L0 core pages such as About me, read every time; L1 entry pages; L2 regular notes; L3 the archive. Records use the same tiers: important records not yet filed are L0, other unfiled ones L1, records filed into notes L2, archived ones and older log entries L3.
+- Pages come in four tiers: L0 core pages such as About me, read every time; L1 entry pages; L2 regular notes; L3 the archive. Records use the same tiers: important records not yet filed are L0 and other unfiled ones L1; a filed record takes the tier of its page, so a line in About me is L0 and one in a regular note L2; archived ones and log entries older than 14 days are L3.
 - `index` has a fixed length: core pages, important records not yet filed (at most 10), entry pages, the last 7 days of log, recent records (at most 20, newest said first), and statements that may be out of date (at most 5). Older ones are found with filters such as `index --since`, `--category` or `--importance`.
 - Private notes never show up in search, read, the index or MCP, not even their titles. Keys found inside ordinary notes are masked when read.
 
@@ -185,7 +185,9 @@ Before every task the AI runs `brainlib next`. It goes through the checks below 
 
 ```mermaid
 flowchart TD
-    S["brainlib next"] --> UP{"New release out?"}
+    S["brainlib next"] --> NEW{"Was the program just replaced by a newer version?"}
+    NEW -->|"yes"| TELL["The new version takes over and tells you what changed"]
+    NEW -->|"no"| UP{"New release out?"}
     UP -->|"yes"| U["update first"]
     UP -->|"no"| AC{"Has the AI done the 4-task self-check?"}
     AC -->|"no"| ACK["agent-check"]
@@ -197,6 +199,8 @@ flowchart TD
     SET -->|"no"| ONE["the next setup step"]
     SET -->|"yes"| DAY["Daily: keys in notes, the vault, changes allowed to go in directly,<br>suggestions due for review, the buffer to organize, answers due for a check, health check"]
 ```
+
+When a new release is out, updating is the step. If the same release comes up again, it is only a line above the step, so an update that keeps failing never holds up everything else.
 
 The output always has the same shape: `NEXT` is what to do, `WHY` is the reason, `RUN` lines are commands to run, `SAY TO USER` is what to tell you, and `THEN` says to run `next` again afterwards. Small models can follow it line by line.
 
@@ -211,12 +215,12 @@ flowchart TD
     D -->|"git clone"| E["Fetch the release tag from the official repository, fast-forward only<br>stops if the program folder has local changes"]
     D -->|"unpacked folder"| F["Download the release zip, check its version and paths<br>back up the old program, then copy over it"]
     D -->|"pip"| G["Print the pip command"]
-    E --> H["The new version takes over: rebuilds the index,<br>refreshes brainlib's lines in tool instructions,<br>replaces a library AGENTS.md nobody edited"]
+    E --> H["The new version takes over: rebuilds the index,<br>refreshes brainlib's lines in tool instructions,<br>replaces a library AGENTS.md nobody edited, backing each up first"]
     F --> H
     H --> I["The AI tells you what changed"]
 ```
 
-To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs.
+To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`; either one only stops the check with GitHub. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs.
 
 ### Exit codes
 
