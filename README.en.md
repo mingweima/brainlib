@@ -76,7 +76,7 @@ Your starting level depends on how you answer the setup questions, and you can c
 
 **How is this different from ChatGPT's built-in memory?** What ChatGPT remembers only helps inside ChatGPT; switch to Cursor and it's gone. The brain library is plain files on your computer, every AI you connect reads the same copy, and each entry says whether you said it or the AI guessed it.
 
-**Does it cost anything?** brainlib is free; the AI tools you use charge their own prices. The license doesn't allow commercial use, and personal study and hobby projects are free. Whether using it for your company's work counts as commercial use is governed by the LICENSE text; if you're unsure, ask me on GitHub.
+**Does it cost anything? Can I use it at work?** brainlib is free; the AI tools you use charge their own prices. Using it yourself is free, and that includes your own work, such as managing your own notes on a work computer. Deploying it for other people, building it into a product or using it to provide a service needs a license from me first.
 
 **I only use ChatGPT, Doubao or Kimi in a browser or on my phone. Can I use it?** Not yet, because brainlib needs to run commands on your computer. Claude Desktop can connect through MCP (a standard way for AI tools to call outside programs); see [docs/mcp.md](docs/mcp.md).
 
@@ -114,6 +114,10 @@ tests/             Tests
 
 ## License
 
-brainlib is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). Individuals can use, modify and share it free of charge for personal use, research, study and hobby projects, and so can charities, schools, public research organizations and government institutions. **Commercial use is not allowed**, and the licensor keeps all commercial rights. For a commercial license, contact the developer through GitHub (github.com/mingweima/brainlib). This is a summary, and the LICENSE text governs.
+brainlib is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). Individuals can use, modify and share it free of charge for personal use, research, study and hobby projects, and so can charities, schools, public research organizations and government institutions.
+
+**Additional permission.** The developer also permits individuals to use brainlib free of charge in their own work, for example to manage their own notes on a work computer. Deploying it for others, building it into a product or using it to provide a service still requires a commercial license.
+
+Any other commercial use is not allowed, and the licensor keeps all commercial rights. For a commercial license, contact the developer through GitHub (github.com/mingweima/brainlib). This is a summary; the LICENSE text and the additional permission above govern.
 
 Developer Mingwei Ma, Capibara Capital.

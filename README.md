@@ -76,7 +76,7 @@ Windows 和 Linux 按理也能用，只是还没实测。遇到问题请在 GitH
 
 **和 ChatGPT 自带的记忆有什么不一样？** ChatGPT 记住的东西只在 ChatGPT 里有用，换到 Cursor 就没了。大脑库是你电脑上的普通文件，接上的几个 AI 读的是同一份，每条还标着是你说的还是 AI 猜的。
 
-**要花钱吗？** brainlib 不收钱，你用的 AI 工具照它们自己的价格收费。许可证不允许商业用途，个人学习、兴趣项目可以免费用。拿它为公司干活算不算商业用途，以 LICENSE 原文为准，拿不准就在 GitHub 上问我。
+**要花钱吗？上班能用吗？** brainlib 不收钱，你用的 AI 工具照它们自己的价格收费。你自己用都免费，在自己的工作里用也算，比如在公司电脑上管自己的笔记。把它部署给别人用、做进产品或者拿来提供服务，要先找我拿授权。
 
 **我只用网页版或手机上的 ChatGPT、豆包、Kimi，能用吗？** 暂时不行，brainlib 要在你的电脑上运行命令。Claude 桌面版可以通过 MCP（AI 工具调用外部程序的一种标准接口）接上，见 [docs/mcp.md](docs/mcp.md)。
 
@@ -114,6 +114,10 @@ tests/             测试
 
 ## 许可证
 
-brainlib 采用 [PolyForm Noncommercial License 1.0.0](LICENSE)。个人使用、研究、学习、兴趣项目，以及慈善、教育、公共研究和政府机构，都可以免费使用、修改和分享；不允许商业用途，商业权利由许可方保留。需要商用授权，请通过 GitHub（github.com/mingweima/brainlib）联系开发者。以上是简要说明，具体以 LICENSE 原文为准。
+brainlib 采用 [PolyForm Noncommercial License 1.0.0](LICENSE)。个人使用、研究、学习、兴趣项目，以及慈善、教育、公共研究和政府机构，都可以免费使用、修改和分享。
+
+**额外许可。** 开发者另外允许个人在自己的工作中免费使用 brainlib，比如在公司电脑上管理自己的笔记。把它部署给他人使用、做进产品或者用来提供服务，仍然需要商业授权。
+
+除此之外不允许商业用途，商业权利由许可方保留。需要商用授权，请通过 GitHub（github.com/mingweima/brainlib）联系开发者。以上是简要说明，具体以 LICENSE 原文和上面的额外许可为准。
 
 开发者 Mingwei Ma，Capibara Capital。

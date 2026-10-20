@@ -37,8 +37,8 @@
   Notes no longer have to say whether they are sensitive once the user has marked topics. Anything about those topics still gets `--private` and is handled as the user chose (Q7); `--not-sensitive` is still accepted but no longer needed. The daily hint still lists the topics.
 - brainlib 拒存的敏感内容，用户说这一条可以记，AI 就去掉 `--private` 再记一次，并给第 7 题记一条信号。
   When brainlib refuses something sensitive and the user says this one is fine to keep, the agent saves it again without `--private` and records a signal on Q7.
-- LICENSE 的版权声明只写开发者个人，公司名留在 README 的署名里。
-  The LICENSE notice now names only the developer; the company stays in the README credit.
+- LICENSE 的版权声明只写开发者个人，公司名留在 README 的署名里。README 加了一条额外许可，个人在自己的工作中用 brainlib 也免费；部署给他人使用、做进产品或者用来提供服务，仍然需要商业授权。
+  The LICENSE notice now names only the developer; the company stays in the README credit. The README adds a permission: individuals may also use brainlib free of charge in their own work, while deploying it for others, building it into a product or using it to provide a service still needs a commercial license.
 - README 重写。开头换成开发者自己写的介绍，新加一节讲缓存区、修改建议和读笔记怎么转；对比表删了，常见问题补上装完多了什么、会不会多费额度、两台电脑怎么用。
   The README was rewritten. It opens with the developer's own introduction and a new section on how the buffer, suggested changes and reading fit together; the comparison table is gone, and the FAQ now covers what gets installed, whether it costs extra quota, and using two computers.
 
