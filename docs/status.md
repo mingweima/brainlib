@@ -38,9 +38,9 @@
 ### v0.2.2（2026-10-20）
 
 - README「用起来是什么样」留三个例子，除了原来的感叹号，新加参考文献格式从 APA 改成 Chicago、隔半年找回审稿人意见两个，删了 NeurIPS、矢量 PDF、聚类和 API key 四个。安装那句话下面改成装的时候 agent 会帮你接上工具，以后每个新对话会自动先读大脑库。
-  The README's "What it looks like" keeps three examples: the exclamation marks, plus two new ones about switching reference style from APA to Chicago and finding reviewers' comments months later. The NeurIPS, vector-PDF, clustering and API-key ones are gone. The line under the install sentence now says the agent connects your tools during install, and every new conversation then reads the brain library first.
+  The README's "What it looks like" now has three examples. The exclamation-mark one stays, and two new ones cover switching reference style from APA to Chicago and finding reviewers' comments months later. The NeurIPS, vector-PDF, clustering and API-key ones are gone. The line under the install sentence now says the agent connects your tools during install, and every new conversation then reads the brain library first.
 - `examples/` 里的两个示例库换成了学术和技术内容，是一位经济系助理教授的笔记。目录层级和边角情形照旧，核心页、日志、私密笔记、归档区、缓存区、过了复查日期的页和断掉的链接都还在。
-  The two sample libraries in `examples/` now hold academic and technical notes, from an economics assistant professor. The layout and edge cases are unchanged: core pages, a journal, a private note, the archive, the unsorted inbox, a page past its check-again date, and a broken link.
+  The two sample libraries in `examples/` now hold academic and technical notes, from an economics assistant professor. The layout and edge cases are unchanged, so core pages, a journal, a private note, the archive, the unsorted inbox, a page past its check-again date and a broken link are all still there.
 - 小修。`privacy scan --path` 给的是单个文件时，以前一个文件都不扫也报没问题，现在会扫这个文件。
   Small fix. `privacy scan --path` pointed at a single file used to check nothing and still report no problems; now it checks that file.
 - 旧库不用迁移。
