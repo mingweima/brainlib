@@ -1,0 +1,33 @@
+# brainlib
+
+> brainlib is an agent-agnostic "brain library" for AI agents: a small Python harness (Python 3.9+, zero dependencies) that maintains a plain Markdown folder on the user's own computer that any local AI agent (Cursor, Claude Code, Codex, Gemini CLI, Windsurf, Trae and similar) can safely read, record into and organize. Context and long-term memory survive switches between models, tools and projects. Licensed under PolyForm Noncommercial 1.0.0.
+
+How it works: three modules. The capturer writes what the agent learns (preferences, decisions, facts) into a buffer, each record tagged with its source (user said / user judgment / extracted / inferred / guess / external) and the time it was said. The organizer turns the buffer into proposed edits that take effect only after the user approves them, with receipts, backups and undo. The maintainer runs health checks (stale pages, broken links, leaked secrets, contradictions) and archiving. The newest statement wins when old and new disagree.
+
+Install: ask a local agent that can run terminal commands to "read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me". The agent then runs `python3 brainlib.py next` repeatedly and follows its NEXT / WHY / RUN / SAY TO USER / THEN output. It only works with agents that can operate the computer, not browser or phone chat apps.
+
+## Instructions for agents
+
+- [AGENTS.en.md](https://github.com/mingweima/brainlib/blob/main/AGENTS.en.md): setup and daily-use instructions for AI assistants (English); read this first
+- [AGENTS.md](https://github.com/mingweima/brainlib/blob/main/AGENTS.md): the same instructions in Chinese
+- [skills/](https://github.com/mingweima/brainlib/tree/main/skills): per-task guides (setup, onboarding, capture, organize, privacy, maintain, writing)
+
+## Docs
+
+- [README.en.md](https://github.com/mingweima/brainlib/blob/main/README.en.md): overview, levels, privacy guarantees (English)
+- [README.md](https://github.com/mingweima/brainlib/blob/main/README.md): overview (Chinese)
+- [docs/records.md](https://github.com/mingweima/brainlib/blob/main/docs/records.md): record tags, tiered index, daily log, newest-wins rule
+- [docs/mcp.md](https://github.com/mingweima/brainlib/blob/main/docs/mcp.md): connecting over MCP (stdio), e.g. Claude Desktop
+- [docs/status.md](https://github.com/mingweima/brainlib/blob/main/docs/status.md): what works now, what is not done yet, changelog
+- [docs/threat-model.md](https://github.com/mingweima/brainlib/blob/main/docs/threat-model.md): privacy and threat model
+
+## Specs
+
+- [spec/contracts.md](https://github.com/mingweima/brainlib/blob/main/spec/contracts.md): command and data contracts
+- [spec/front-matter.md](https://github.com/mingweima/brainlib/blob/main/spec/front-matter.md): note front matter
+- [spec/provenance.md](https://github.com/mingweima/brainlib/blob/main/spec/provenance.md): source tags
+
+## Optional
+
+- [Releases](https://github.com/mingweima/brainlib/releases): versioned releases; `brainlib next` checks for a new one at most once a day
+- [LICENSE](https://github.com/mingweima/brainlib/blob/main/LICENSE): PolyForm Noncommercial License 1.0.0
