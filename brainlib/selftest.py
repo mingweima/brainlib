@@ -95,17 +95,17 @@ def run(verbose=False):
         r.check("all ten onboarding questions recorded", out.count("answered 20") == 10 or out.count("[answered") == 10, out)
 
         code, out = r.cli("note", "我早上只喝茶，不喝咖啡。", "--said", *lib)
-        r.check("a note must say whether it is sensitive once the user marked topics", code == 2 and "--not-sensitive" in out, out)
-        code, out = r.cli("note", "我早上只喝茶，不喝咖啡。", "--said", "--not-sensitive", *lib)
         r.check("note saves the user's words to the inbox", code == 0 and "SAVED" in out, out)
-        code, out = r.cli("note", "我早上只喝茶，不喝咖啡。", "--said", "--not-sensitive", *lib)
+        code, out = r.cli("note", "我早上只喝茶，不喝咖啡。", "--said", *lib)
         r.check("the same note twice is saved once", "ALREADY SAVED" in out, out)
         code, out = r.cli("find", "早上喝什么", *lib)
         r.check("what was just noted can be found before it is filed", "NOT FILED YET" in out and "只喝茶" in out, out)
         fake = "ghp_" + "A1b2C3d4" * 5
         code, out = r.cli("note", "token " + fake, "--said", *lib)
         r.check("secrets are refused", code == 3 and fake not in out, out)
-        code, out = r.cli("note", "the user is probably a morning person", "--inferred", "--not-sensitive", *lib)
+        code, out = r.cli("note", "我对花生过敏。", "--said", "--private", *lib)
+        r.check("a private note follows the user's choice for sensitive things (Q7)", code == 3 and "NOT saved" in out, out)
+        code, out = r.cli("note", "the user is probably a morning person", "--inferred", *lib)
         r.check("inferences are refused when the user chose 'important things only'", code == 4, out)
 
         before_me = _sha(lib_dir / "me.md")

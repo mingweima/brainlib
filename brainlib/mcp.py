@@ -50,8 +50,8 @@ TOOLS = [
         "description": (
             "Save something to the inbox (changes no note). provenance: said (user's exact words), judgment, "
             "extracted (with source = file), inferred, guess, external (with source). private: true if it is about "
-            "a topic the user marked sensitive, false if not (needed once the user has marked any). now=true with "
-            "target makes the suggested change right away, for when the user named the note."
+            "a topic the user marked sensitive. now=true with target makes the suggested change right away, for "
+            "when the user named the note."
         ),
         "inputSchema": _s("", text=STR, provenance=STR, source=STR, said_at=STR, target=STR, private=BOOL, now=BOOL),
     },
@@ -136,8 +136,6 @@ def _argv_for(name, a, library):
             argv += ["--target", g("target")]
         if g("private") is True:
             argv.append("--private")
-        elif g("private") is False:
-            argv.append("--not-sensitive")
         if g("now"):
             argv.append("--now")
         return argv

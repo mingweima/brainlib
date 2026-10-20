@@ -4,4 +4,4 @@ Plain Markdown is the only source of truth. Everything else (index, reading guid
 reports, inbox, proposals, receipts) is either derived or append-only state.
 """
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"

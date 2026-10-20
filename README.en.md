@@ -1,6 +1,6 @@
 # brainlib
 
-**Your own AI brain library. One copy shared by every AI assistant you use, and it knows you better the longer you use it.**
+**Your own AI brain library. One copy shared by the AI assistants you connect, and it knows you better the longer you use it.**
 
 [中文](README.md)
 
@@ -12,7 +12,7 @@ Over time the context grows too big for the AI to handle, and its memory gets mu
 What brainlib does is simple. It keeps what your AIs learn about you, as they learn it, in a folder on your own computer. We call it your brain library. Whichever AI you use, it reads the brain library first,
 the way a new colleague reads the handover notes on day one. Once it has read them, it knows who you are and how to work with you.
 
-After each conversation, the AI writes what it learned into the brain library. The longer you use it, the better it knows you. Switch models or switch tools, and everything in the brain library is still yours.
+After each conversation, the AI writes what it learned into the brain library, and nothing goes into your notes until you say yes. The longer you use it, the better it knows you. Switch models or switch tools, and everything in the brain library is still yours.
 
 We call this goal cyber-immortality. Record your thinking and the way you make decisions completely, so that whatever AI comes next can act the way you would.
 

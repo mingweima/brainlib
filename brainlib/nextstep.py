@@ -309,7 +309,7 @@ def daily_rules(lib, settings):
         "with brainlib read <path>. They tell you who the user is and how to work with them.\n"
         "Before answering anything about the user, run: brainlib find \"<topic>\" and read the top notes with brainlib read <path>.\n"
         "When the user tells you something worth remembering, run: brainlib note \"<their exact words>\" --said%s\n"
-        % (" plus --private or --not-sensitive (next line)" if sensitive else "")
+        % (" (add --private if it is about a topic on the next line)" if sensitive else "")
         + sensitive
         + "If the user says which note it belongs in, add --target <that note's path> --now, and show the user the change it prints.\n"
         "If it is about the user themself (a preference, habit or value), add --target me.md.\n"
@@ -331,7 +331,7 @@ def _sensitive_line(lib, settings):
         return ""
     line = (
         "The user marked these topics as sensitive (onboarding Q6): %s. A note about one of them gets --private, "
-        "and never goes into a note any other way (not through propose either); any other note gets --not-sensitive. "
+        "and never goes into a note any other way (not through propose either). "
         "If you are not sure whether something counts, ask the user. brainlib then handles private things the way "
         "the user chose (Q7).\n" % "; ".join(names)
     )

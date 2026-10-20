@@ -570,13 +570,6 @@ def cmd_note(args):
     if text.strip() == "-":
         text = sys.stdin.read()
     privacy.refuse_if_secret(text)
-    topics = onboard.sensitive_topic_names(lib, settings)
-    if topics and not (args.private or args.not_sensitive):
-        raise BrainError(
-            "The user marked some topics as sensitive (onboarding Q6: %s), so every note must say whether it is "
-            "about one of them. Nothing was saved." % "; ".join(topics),
-            fix="If it is about one of them, run the same command with --private. If it is not, add --not-sensitive.",
-        )
     item, dup = inbox.add(
         lib,
         text,
@@ -1108,7 +1101,7 @@ def build_parser():
     g.add_argument("--external", metavar="SOURCE", help="outside material (name the source)")
     s.add_argument("--said-at", help="when the user said it (YYYY-MM-DD)")
     s.add_argument("--private", action="store_true", help="about a topic the user marked sensitive (Q6): handled as they chose (Q7)")
-    s.add_argument("--not-sensitive", action="store_true", help="not about any topic the user marked sensitive")
+    s.add_argument("--not-sensitive", action="store_true", help=argparse.SUPPRESS)
     s.add_argument("--target", help="the note it probably belongs in")
     s.add_argument("--now", action="store_true", help="with --target: make the suggested change right away (the user named the note)")
     s.add_argument("--tag", action="append")

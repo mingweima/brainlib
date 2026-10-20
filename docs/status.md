@@ -1,4 +1,4 @@
-# v0.1.4 现状 / Status
+# v0.1.5 现状 / Status
 
 ## 能用的 / Works
 
@@ -30,6 +30,15 @@
 - 技能说明目前以中文为主，英文版只有 `AGENTS.en.md` 和 `README.en.md`。
 
 ## 更新记录 / Changes
+
+### v0.1.5（2026-10-20）
+
+- 用户勾过敏感话题以后，`note` 不再要求每条都说明是否敏感。涉及这些话题的照旧加 `--private`，按第 7 题处理；`--not-sensitive` 仍然认，但用不着了。日常提示照旧列出这些话题。
+  Notes no longer have to say whether they are sensitive once the user has marked topics. Anything about those topics still gets `--private` and is handled as the user chose (Q7); `--not-sensitive` is still accepted but no longer needed. The daily hint still lists the topics.
+- brainlib 拒存的敏感内容，用户说这一条可以记，AI 就去掉 `--private` 再记一次，并给第 7 题记一条信号。
+  When brainlib refuses something sensitive and the user says this one is fine to keep, the agent saves it again without `--private` and records a signal on Q7.
+- LICENSE 的版权声明只写开发者个人，公司名留在 README 的署名里。
+  The LICENSE notice now names only the developer; the company stays in the README credit.
 
 ### v0.1.4（2026-10-20）
 
