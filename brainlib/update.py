@@ -16,8 +16,9 @@ an older brainlib wrote and nobody edited since. If the program changed some oth
 `brainlib next` that runs the new code does the same. Each copy of the program remembers its own
 version and only rewrites files that run it, or run a copy that is gone, so two copies sharing
 ~/.brainlib leave each other alone; when one is deleted, the next copy to run takes over the files
-that named it. After going back to an older version, brainlib does not update itself to the version
-the user left.
+that named it. A copy on a drive that is not mounted, or in a folder that can't be read, is not taken
+for deleted. After going back to an older version, brainlib does not update itself to the version the
+user left.
 
 `brainlib update --off` stops the checks; so does the environment variable BRAINLIB_NO_UPDATE_CHECK=1.
 Adapting after a manual update still happens; it never goes online.
@@ -115,12 +116,28 @@ def remember_version():
         _save(st)
 
 
-def _still_there(program):
-    p = Path(program)
+def _exists(path):
+    """True or False, or None when it can't be told (a folder that can't be read, for example)."""
     try:
-        return (p / "brainlib.py").is_file() or (p / "brainlib" / "__init__.py").is_file()
-    except OSError:
+        os.stat(str(path))
         return True
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except (OSError, ValueError):
+        return None
+
+
+def _still_there(program):
+    """Whether a copy of the program may still be in that folder. Only a copy known to be deleted counts as
+    gone: one in a folder that can't be read, or whose parent is missing too (a drive that is not mounted),
+    stays."""
+    p = Path(program)
+    found = _exists(p)
+    if found is False:
+        return _exists(p.parent) is not True
+    if found is None:
+        return True
+    return any(_exists(f) is not False for f in (p / "brainlib.py", p / "brainlib" / "__init__.py"))
 
 
 def _newest(versions):
@@ -455,9 +472,11 @@ def _runs_here(cmd):
     if m:
         target = Path(m.group(1))
         try:
-            return not target.is_file() or target.resolve() == (PROGRAM_DIR / "brainlib.py").resolve()
+            if target.resolve() == (PROGRAM_DIR / "brainlib.py").resolve():
+                return True
         except OSError:
             return False
+        return not _still_there(target.parent)
     if cmd == "brainlib":
         return install_kind() == "package" or not shutil.which("brainlib")
     return cmd.endswith(" -m brainlib") and install_kind() == "package"
@@ -644,6 +663,13 @@ def on_next(lang):
     from its work. Never raises."""
     out = {"instead": None, "offer": None, "notices": [], "info": None}
     try:
+        if not _still_there(PROGRAM_DIR):
+            out["notices"].append(
+                "RESTART: the files of this brainlib (%s) are gone, but this process still runs it. Ask the user to "
+                "restart the app that runs brainlib (Claude Desktop, for example); if its settings name this folder, "
+                "they need to point it at the copy they kept." % PROGRAM_DIR
+            )
+            return out
         st = _state()
         disk = installed_version()
         copies = dict(st.get("seen") or {})

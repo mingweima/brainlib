@@ -726,6 +726,33 @@ class UpdateTests(Base):
         self.assertIn("brainlib 99.0.1 is out", self.cli("next", "--library", str(self.root))[1])
         self.assertEqual(json.loads(self.cli("next", "--json", "--library", str(self.root))[1])["update"]["latest"], "99.0.1")
 
+    def test_only_a_copy_known_to_be_deleted_counts_as_gone(self):
+        kept = self.tmp / "kept"
+        kept.mkdir()
+        (kept / "brainlib.py").write_text("", encoding="utf-8")
+        (self.tmp / "emptied").mkdir()
+        offline = self.tmp / "drive not mounted" / "brainlib"
+        self.assertTrue(update._still_there(kept))
+        self.assertFalse(update._still_there(self.tmp / "deleted"))
+        self.assertFalse(update._still_there(self.tmp / "emptied"))
+        self.assertTrue(update._still_there(offline))
+        with mock.patch.object(update.os, "stat", side_effect=PermissionError("Permission denied")):
+            self.assertTrue(update._still_there(self.tmp / "deleted"))
+        self.assertTrue(update._runs_here('python3 "%s"' % (self.tmp / "deleted" / "brainlib.py")))
+        self.assertFalse(update._runs_here('python3 "%s"' % (offline / "brainlib.py")))
+        self.assertFalse(update._runs_here('python3 "%s"' % (kept / "brainlib.py")))
+        self.assertTrue(update._runs_here('python3 "%s"' % (update.PROGRAM_DIR / "brainlib.py")))
+
+    def test_a_process_whose_files_were_deleted_asks_for_a_restart(self):
+        self.cli("init", str(self.root))
+        before = config.global_state()["update"]
+        with mock.patch.object(update, "PROGRAM_DIR", self.tmp / "moved away"):
+            up = update.on_next("en")
+        self.assertIn("RESTART: the files of this brainlib", "\n".join(up["notices"]))
+        self.assertIsNone(up["instead"])
+        self.assertIsNone(up["offer"])
+        self.assertEqual(config.global_state()["update"], before)
+
     def test_a_copy_that_replaces_a_deleted_one_takes_over_from_its_version(self):
         self.cli("init", str(self.root))
         gs = config.global_state()
@@ -925,6 +952,21 @@ class ConnectTests(Base):
         self.assertEqual((self.root / "AGENTS.md").read_text(encoding="utf-8"), cli.agents_text(self.root, "en"))
         self.assertEqual(list(config.global_state()["update"]["seen"]), [str(update.PROGRAM_DIR)])
         self.assertNotIn("REFRESHED", self.cli("next", "--library", str(self.root))[1])
+
+    def test_a_copy_on_a_drive_that_is_not_mounted_keeps_its_lines(self):
+        self.cli("init", str(self.root))
+        lib = config.load(str(self.root))
+        offline = self.tmp / "drive not mounted" / "brainlib"
+        tool = self.tool_file(".claude", "CLAUDE.md", text="%s\n" % connect.block(lib, 'python3 "%s"' % (offline / "brainlib.py"), "en"))
+        before = tool.read_text(encoding="utf-8")
+        gs = config.global_state()
+        gs["update"]["seen"][str(offline)] = update.__version__
+        gs["update"]["seen"][str(self.tmp / "deleted copy")] = update.__version__
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertNotIn("REFRESHED", out)
+        self.assertEqual(tool.read_text(encoding="utf-8"), before)
+        self.assertEqual(sorted(config.global_state()["update"]["seen"]), sorted([str(update.PROGRAM_DIR), str(offline)]))
 
     def test_a_part_that_cannot_be_refreshed_is_reported_and_not_retried(self):
         self.cli("init", str(self.root))
