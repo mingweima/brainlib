@@ -14,7 +14,7 @@
 Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me.
 ```
 
-After that, whenever you start a new agent conversation, have it read what's in the `brainlib` folder first.
+Once your tools are connected, every new conversation reads the brain library first on its own; for tools like Cursor and Trae, paste the short text the agent gives you into their settings.
 
 > [!IMPORTANT]
 > **It only works on a computer.** `brainlib` reads and writes your notes and runs commands on your computer, so it only works with an AI that can operate your machine, such as Cursor, Claude Code or Codex. AIs in a browser or a phone app can't connect; that is by design.
@@ -36,10 +36,8 @@ The maintainer finds pages past their check-again date, broken links, passwords 
 ## What it looks like
 
 - On Monday you mention in Cursor that you never use exclamation marks. On Wednesday you ask Claude Code to write an email; it checks the brain library first, and the email has no exclamation marks.
-- You say "I'm presenting this paper at NeurIPS next month", and that sentence is what it saves. If it guesses the paper is about reinforcement learning, that's saved as a guess.
-- A few days later it asks "Add 'export every figure in a paper as vector PDF' to About me?", and it changes the note only after you say yes.
-- Last month you said "cluster the standard errors by firm"; today you say "cluster by firm and year instead". It asks "Replace 'cluster by firm' with 'cluster by firm and year'?", and from then on every AI goes by the new one.
-- You paste an OpenAI API key and say "remember this for next time". It won't, and suggests a password manager, with only a note of where the key is kept.
+- Last month you said to format references in APA; this month you switch to Chicago. It asks whether to change APA to Chicago in your notes, you say yes, and from then on every AI formats your references in Chicago.
+- In March you ask Codex to note what the reviewers said about chapter two. In September you ask Cursor what the reviewers said about chapter two, and it finds that note in the brain library and tells you which day in March it was saved.
 
 ## Installing
 
