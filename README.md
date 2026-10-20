@@ -78,7 +78,7 @@ Windows 上每次改动都会自动跑一遍测试，但还没有人实际装过
 - 保险箱用 [age](https://github.com/FiloSottile/age) 加密。口令要你本人在命令行窗口里输入，AI 打不开。保险箱是可选的，默认不开。
 - 改动记录和检查报告只记改了哪篇、谁同意的，不抄笔记内容。
 - 要把大脑库分享给别人之前，可以用你自己的私密词表（真名、公司、住址这些）扫一遍，一处都没有才放行。
-- `brainlib` 自己联网只为了更新。它每天最多向 GitHub 查一次最新的版本号，有新版本时从 GitHub 下载。请求里不带你的笔记和任何个人信息，GitHub 看得到的只有你的 IP 地址和 `brainlib` 的版本号。不想要可以关掉。
+- `brainlib` 自己联网只为了更新。它每天最多自己向 GitHub 查一次最新的版本号，你或 AI 手动运行 `brainlib update` 时也会查；有新版本时从 GitHub 下载。请求里不带你的笔记和任何个人信息，GitHub 看得到的只有你的 IP 地址和 `brainlib` 的版本号。不想要可以关掉。
 
 **有几件事它做不到。**
 
@@ -141,7 +141,7 @@ flowchart LR
   registry.json               登记过的大脑库，以及哪个是默认
   libraries/<库编号>/state/    缓存区 inbox/、修改建议 proposals/、回执 receipts/、改笔记前的备份 backups/、开场题答案
   libraries/<库编号>/out/      索引 index.json、全部记录 records.json、体检报告 reports.json
-  backups/                    改工具说明、更新程序之前的备份
+  backups/                    改工具说明、换库内 AGENTS.md、更新程序之前的备份
 ```
 
 ### 从你说的话到笔记
@@ -220,7 +220,7 @@ flowchart TD
     H --> I["AI 告诉你更新了什么"]
 ```
 
-不想自动更新，运行 `brainlib update --off`，或者设环境变量 `BRAINLIB_NO_UPDATE_CHECK=1`，两种办法都只停掉去 GitHub 查的那一步。手动更新也行，不管是 `git pull` 还是换了文件夹，下一次运行 `next` 时新版本都会自己接手。
+不想自动更新，运行 `brainlib update --off`，或者设环境变量 `BRAINLIB_NO_UPDATE_CHECK=1`，两种办法都只停掉去 GitHub 查的那一步。手动更新也行，不管是 `git pull` 还是换了文件夹，下一次运行 `next` 时新版本都会自己接手。从备份退回旧版本以后，它不会再自己装回刚退掉的那个版本，更新的版本出来时照常更新。同一台电脑上有两份 `brainlib` 时，每份只改指向自己或者指向已删掉的那份的地方。
 
 ### 退出码
 

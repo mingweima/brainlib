@@ -326,7 +326,7 @@ def cmd_update(args):
             "OK: brainlib will no longer check for new releases. `brainlib update` still works when run by hand."
         )
         return EXIT_OK
-    info = update.check(force=True)
+    info = update.known_newer() or update.check(force=True)
     if info["error"] or not info["latest"]:
         print(
             "COULD NOT CHECK: %s\nNothing was changed. Try again later; if it keeps failing, the user can download the "

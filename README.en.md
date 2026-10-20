@@ -78,7 +78,7 @@ Your starting level depends on how you answer the setup questions, and you can c
 - The vault is encrypted with [age](https://github.com/FiloSottile/age). Only you can type its passphrase, in a terminal window, so the AI can't open it. The vault is optional and off by default.
 - Change records and check reports never copy your notes. They record only which note changed and who approved it.
 - Before sharing your brain library with anyone, you can scan it against your own private word list (real names, company, address and so on), and it passes only with zero matches.
-- `brainlib` goes online only to update itself: at most once a day it asks GitHub for the latest version number, and it downloads a new release from GitHub when there is one. The requests carry none of your notes or personal details; GitHub sees only your IP address and the `brainlib` version. You can turn this off.
+- `brainlib` goes online only to update itself: at most once a day it asks GitHub for the latest version number on its own, and again when you or the AI run `brainlib update`; it downloads a new release from GitHub when there is one. The requests carry none of your notes or personal details; GitHub sees only your IP address and the `brainlib` version. You can turn this off.
 
 **A few things it can't do.**
 
@@ -113,7 +113,7 @@ Your starting level depends on how you answer the setup questions, and you can c
 
 ## Why I built it
 
-I first built a brain library for myself. Several AIs read it and write to it day to day, and later I turned the parts anyone could use into brainlib. My one requirement was that the whole library could be handed to a brand-new AI at any time, and it could take over after one read. I call this goal cyber-immortality: record my thinking and the way I make decisions completely, so that whatever AI comes next can act the way I would.
+I first built a brain library for myself. Several AIs read it and write to it day to day, and later I turned the parts anyone could use into `brainlib`. My one requirement was that the whole library could be handed to a brand-new AI at any time, and it could take over after one read. I call this goal cyber-immortality: record my thinking and the way I make decisions completely, so that whatever AI comes next can act the way I would.
 
 ## How it works inside
 
@@ -141,7 +141,7 @@ The brain library folder holds your notes. `brainlib` adds only a settings file,
   registry.json               the libraries brainlib knows, and which one is the default
   libraries/<id>/state/       the buffer inbox/, suggested changes proposals/, receipts receipts/, backups made before changing notes backups/, setup answers
   libraries/<id>/out/         the index index.json, all records records.json, health report reports.json
-  backups/                    backups made before changing tool instructions or updating the program
+  backups/                    backups made before changing tool instructions or a library AGENTS.md, or updating the program
 ```
 
 ### From what you said to a note
@@ -220,7 +220,7 @@ flowchart TD
     H --> I["The AI tells you what changed"]
 ```
 
-To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`; either one only stops the check with GitHub. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs.
+To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`; either one only stops the check with GitHub. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs. After going back to an older version from a backup, it won't update itself to the version you left, but newer releases still install. With two copies of `brainlib` on one computer, each changes only the lines that run it or run a copy that has been deleted.
 
 ### Exit codes
 

@@ -649,6 +649,12 @@ class UpdateTests(Base):
         self.assertTrue(update._official("https://github.com/%s/" % update.REPO))
         self.assertFalse(update._official("https://github.com/someone/brainlib.git"))
 
+    def age(self, *keys):
+        gs = config.global_state()
+        for key in keys:
+            gs["update"][key] = "2020-01-01T00:00:00+00:00"
+        config.save_global_state(gs)
+
     def test_a_new_release_is_the_next_step_once_and_can_be_turned_off(self):
         self.cli("init", str(self.root))
         os.environ.pop("BRAINLIB_NO_UPDATE_CHECK")
@@ -660,17 +666,21 @@ class UpdateTests(Base):
         self.assertNotIn("self-check", out)
         self.assertNotIn("UPDATED:", out)
         out = self.cli("next", "--library", str(self.root))[1]
+        self.assertNotIn("is out", out)
+        self.assertIn("self-check", out)
+        self.age("noted_at")
+        out = self.cli("next", "--library", str(self.root))[1]
         self.assertIn("NOTE: brainlib 99.0.0 is out", out)
         self.assertIn("self-check", out)
+        self.assertNotIn("NOTE:", self.cli("next", "--library", str(self.root))[1])
         self.feed("v0.0.1")
-        self.assertIn("99.0.0 is out", self.cli("next", "--library", str(self.root))[1])
+        self.assertIn("AVAILABLE: brainlib 99.0.0", self.cli("update", "--check")[1])
+        self.age("checked_at")
         self.assertIn("UP TO DATE", self.cli("update", "--check")[1])
         self.assertNotIn("is out", self.cli("next", "--library", str(self.root))[1])
         self.feed("v99.0.0")
         self.cli("update", "--off")
-        gs = config.global_state()
-        gs["update"]["checked_at"] = "2020-01-01T00:00:00+00:00"
-        config.save_global_state(gs)
+        self.age("checked_at", "noted_at")
         self.assertNotIn("is out", self.cli("next", "--library", str(self.root))[1])
         self.assertIn("AVAILABLE: brainlib 99.0.0", self.cli("update", "--check")[1])
         self.assertEqual(mcp._argv_for("kb_update", {"off": True}, None), ["update", "--off"])
@@ -696,6 +706,21 @@ class UpdateTests(Base):
             self.assertIn("RESTART: brainlib 99.0.0 is installed", self.cli("next", "--library", str(self.root))[1])
             self.assertIn("this computer has brainlib 99.0.0", self.cli("update", "--check")[1])
 
+    def test_going_back_to_an_older_version_is_not_undone_by_itself(self):
+        self.cli("init", str(self.root))
+        gs = config.global_state()
+        gs["update"]["seen"][str(update.PROGRAM_DIR)] = "99.0.0"
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertIn("WENT BACK: brainlib is now %s (it was 99.0.0)" % update.__version__, out)
+        self.assertNotIn("UPDATED", out)
+        os.environ.pop("BRAINLIB_NO_UPDATE_CHECK")
+        self.feed("v99.0.0")
+        self.assertNotIn("is out", self.cli("next", "--library", str(self.root))[1])
+        self.feed("v99.0.1")
+        self.age("checked_at")
+        self.assertIn("brainlib 99.0.1 is out", self.cli("next", "--library", str(self.root))[1])
+
     def test_agents_files_name_a_command_a_fresh_terminal_can_run(self):
         cli._python()
         with mock.patch.object(cli.shutil, "which", return_value=None):
@@ -716,6 +741,11 @@ class UpdateTests(Base):
                 update.update_folder(prog, "v0.3.0", "0.3.0", archive=archive)
         self.assertEqual(update._version_in(prog), "0.2.0")
         self.assertFalse((self.tmp / "evil.py").exists())
+        with mock.patch.object(zipfile.ZipFile, "extractall", side_effect=zipfile.BadZipFile("Bad CRC-32")):
+            with self.assertRaises(BrainError) as e:
+                update.update_folder(prog, "v0.3.0", "0.3.0", archive=self.release_zip("crc.zip", "0.3.0"))
+        self.assertIn("could not be unpacked", e.exception.message)
+        self.assertEqual(update._version_in(prog), "0.2.0")
 
     def test_a_failed_copy_puts_the_old_program_back(self):
         prog = self.tmp / "prog"
@@ -819,21 +849,80 @@ class ConnectTests(Base):
         with self.assertRaises(BrainError):
             connect.write(lib, "cursor", "brainlib", "zh")
 
+    def tool_file(self, *parts, text):
+        path = self.home.joinpath(*parts)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def other_copy(self):
+        launcher = self.tmp / "other copy" / "brainlib.py"
+        launcher.parent.mkdir()
+        launcher.write_text("print('another copy')\n", encoding="utf-8")
+        return 'python3 "%s"' % launcher
+
     def test_an_update_refreshes_the_lines_brainlib_wrote_into_tool_files(self):
         lib = self.lib({})
         config.register(self.root)
-        path = self.home / ".claude" / "CLAUDE.md"
-        path.parent.mkdir()
-        path.write_text("# Mine\n\n%s\n## My brain library\nOld wording, at %s.\n%s\n" % (connect.START, lib.root, connect.END), encoding="utf-8")
-        other = self.home / ".gemini" / "GEMINI.md"
-        other.parent.mkdir()
-        other.write_text("%s\nA library brainlib does not know: /elsewhere\n%s\n" % (connect.START, connect.END), encoding="utf-8")
+        mine = self.tool_file(".claude", "CLAUDE.md", text="# Mine\n\n%s\n## My brain library\nOld wording: run `python3 \"/gone/brainlib.py\" next`, at %s.\n%s\n" % (connect.START, lib.root, connect.END))
+        unknown = self.tool_file(".gemini", "GEMINI.md", text="%s\nA library brainlib does not know: run `brainlib next` at /elsewhere\n%s\n" % (connect.START, connect.END))
+        theirs = self.tool_file(".codex", "AGENTS.md", text="%s\n" % connect.block(lib, self.other_copy(), "en"))
+        kept = theirs.read_text(encoding="utf-8")
         r = update.adapt("0.1.0")
-        self.assertEqual(r["tool_files"], [str(path)])
-        text = path.read_text(encoding="utf-8")
+        self.assertEqual(r["tool_files"], [str(mine)])
+        text = mine.read_text(encoding="utf-8")
         self.assertTrue(text.startswith("# Mine\n\n%s\n## My brain library" % connect.START))
         self.assertNotIn("Old wording", text)
-        self.assertIn("/elsewhere", other.read_text(encoding="utf-8"))
+        self.assertIn("/elsewhere", unknown.read_text(encoding="utf-8"))
+        self.assertEqual(theirs.read_text(encoding="utf-8"), kept)
+
+    def test_a_second_copy_leaves_the_first_ones_files_alone(self):
+        self.cli("init", str(self.root))
+        lib = config.load(str(self.root))
+        theirs = self.other_copy()
+        tool = self.tool_file(".claude", "CLAUDE.md", text="%s\n" % connect.block(lib, theirs, "en"))
+        template = (update.PROGRAM_DIR / update.TEMPLATE_DIR / "AGENTS.md").read_text(encoding="utf-8")
+        agents = template.replace("{BRAINLIB_CMD}", theirs).replace("{LIBRARY}", str(self.root)).replace("{WRITING_SKILL}", str(nextstep.WRITING_SKILL))
+        (self.root / "AGENTS.md").write_text(agents, encoding="utf-8")
+        before = tool.read_text(encoding="utf-8")
+        gs = config.global_state()
+        gs["update"]["seen"] = {str(self.tmp / "other copy"): update.__version__}
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertNotIn("UPDATED", out)
+        self.assertIn("self-check", out)
+        self.assertEqual(tool.read_text(encoding="utf-8"), before)
+        self.assertEqual((self.root / "AGENTS.md").read_text(encoding="utf-8"), agents)
+        self.assertEqual(update.seen_version(), update.__version__)
+        shutil.rmtree(str(self.tmp / "other copy"))
+        gs = config.global_state()
+        del gs["update"]["seen"][str(update.PROGRAM_DIR)]
+        config.save_global_state(gs)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertIn("REFRESHED: %s now runs this copy" % tool, out)
+        self.assertIn("self-check", out)
+        self.assertIn(cli.standalone_cmd(), tool.read_text(encoding="utf-8"))
+        self.assertEqual((self.root / "AGENTS.md").read_text(encoding="utf-8"), cli.agents_text(self.root, "en"))
+
+    def test_a_part_that_cannot_be_refreshed_is_reported_and_not_retried(self):
+        self.cli("init", str(self.root))
+        lib = config.load(str(self.root))
+        self.tool_file(".claude", "CLAUDE.md", text="%s\n" % connect.block(lib, 'python3 "/gone/brainlib.py"', "en"))
+        gs = config.global_state()
+        gs["update"]["seen"][str(update.PROGRAM_DIR)] = "0.1.0"
+        config.save_global_state(gs)
+        with mock.patch.object(connect, "atomic_write", side_effect=PermissionError("Permission denied")):
+            out = self.cli("next", "--library", str(self.root))[1]
+        self.assertIn("COULD NOT REFRESH: the brainlib lines for Claude Code (Permission denied)", out)
+        self.assertIn("Also tell them what could not be refreshed", out)
+        self.assertEqual(update.seen_version(), update.__version__)
+        os.environ.pop("BRAINLIB_NO_UPDATE_CHECK")
+        feed = self.tmp / "release.json"
+        feed.write_text(json.dumps({"tag_name": "v99.0.0"}), encoding="utf-8")
+        os.environ["BRAINLIB_UPDATE_FEED"] = str(feed)
+        out = self.cli("next", "--library", str(self.root))[1]
+        self.assertNotIn("COULD NOT REFRESH", out)
+        self.assertIn("brainlib 99.0.0 is out", out)
 
     def test_next_asks_to_connect_after_onboarding(self):
         lib = self.lib({})
