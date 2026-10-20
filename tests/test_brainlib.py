@@ -35,7 +35,7 @@ from brainlib import (  # noqa: E402
     records,
     scan,
 )
-from brainlib.util import BrainError, atomic_write, command_lock, today, write_json  # noqa: E402
+from brainlib.util import BrainError, FileLock, atomic_write, command_lock, today, write_json  # noqa: E402
 
 FAKE_TOKEN = "gh" + "p_" + "Zx9" * 13
 FAKE_CARD = "4111" + "1111" + "1111" + "1111"
@@ -857,16 +857,24 @@ class CliTests(Base):
         with self.assertRaises(BrainError):
             with command_lock(home, wait=0.2):
                 pass
-        if os.name != "nt":
-            gone = subprocess.Popen([sys.executable, "-c", "pass"])
-            gone.wait()
-            lock.write_text("%d %f\n" % (gone.pid, time.time()), encoding="ascii")
-            with command_lock(home, wait=0.2):
-                pass
+        gone = subprocess.Popen([sys.executable, "-c", "pass"])
+        gone.wait()
+        lock.write_text("%d %f\n" % (gone.pid, time.time()), encoding="ascii")
+        with command_lock(home, wait=0.2):
+            pass
         lock.write_text("%d %f\n" % (os.getpid(), time.time() - 3600), encoding="ascii")
         with command_lock(home, wait=0.2):
             pass
         self.assertFalse(lock.exists())
+        write_lock = self.tmp / "write.lock"
+        write_lock.write_text("%d 2026-10-20T08:00:00" % os.getpid(), encoding="ascii")
+        with self.assertRaises(BrainError):
+            with FileLock(write_lock, timeout=0.2):
+                pass
+        write_lock.write_text("%d 2026-10-20T08:00:00" % gone.pid, encoding="ascii")
+        with FileLock(write_lock, timeout=0.2):
+            self.assertTrue(write_lock.exists())
+        self.assertFalse(write_lock.exists())
 
 
 class McpTests(Base):

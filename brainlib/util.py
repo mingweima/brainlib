@@ -161,12 +161,10 @@ def command_lock(home, wait=60.0, stale=600.0):
         try:
             fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             break
-        except FileExistsError:
+        except (FileExistsError, PermissionError) as e:
+            _raise_unless_busy(e)
             if _lock_is_stale(path, stale):
-                try:
-                    os.unlink(str(path))
-                except OSError:
-                    pass
+                _remove_lock(path)
                 continue
             if time.monotonic() > deadline:
                 raise BrainError(
@@ -186,31 +184,76 @@ def command_lock(home, wait=60.0, stale=600.0):
     finally:
         _LOCK_DEPTH[0] = 0
         os.environ.pop(LOCK_ENV, None)
+        _remove_lock(path)
+
+
+def _raise_unless_busy(e):
+    # Windows reports a lock file that is still being deleted as PermissionError.
+    if isinstance(e, PermissionError) and os.name != "nt":
+        raise e
+
+
+def _remove_lock(path, tries=40):
+    # On Windows a file cannot be deleted while another process has it open, even for a moment.
+    for _ in range(tries):
         try:
             os.unlink(str(path))
+            return
+        except FileNotFoundError:
+            return
         except OSError:
-            pass
+            time.sleep(0.05)
 
 
 def _lock_is_stale(path, stale):
+    """A lock is stale when it is older than `stale` seconds or the process that took it has ended."""
     try:
-        pid, started = path.read_text(encoding="ascii").split()[:2]
-        pid, started = int(pid), float(started)
+        parts = path.read_text(encoding="ascii").split()
     except (OSError, ValueError):
+        parts = []
+    try:
+        started = float(parts[1])
+    except (IndexError, ValueError):
         try:
-            return time.time() - path.stat().st_mtime > stale
+            started = path.stat().st_mtime
         except OSError:
             return False
     if time.time() - started > stale:
         return True
-    if os.name != "nt":  # on Windows os.kill would terminate the process, so rely on age only
+    try:
+        pid = int(parts[0])
+    except (IndexError, ValueError):
+        return False
+    return not _pid_alive(pid)
+
+
+def _pid_alive(pid):
+    if os.name == "nt":  # os.kill would terminate the process on Windows
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return ctypes.get_last_error() == 5  # access denied: the process exists
         try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return True
-        except OSError:
-            return False
-    return False
+            code = wintypes.DWORD()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+                return True
+            return code.value == 259  # STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return True
+    return True
 
 
 def read_json(path, default=None):
@@ -255,7 +298,8 @@ def read_jsonl(path):
 class FileLock:
     """Cross-platform exclusive lock using an O_EXCL lock file.
 
-    A lock older than `stale_after` seconds is assumed abandoned and broken.
+    A lock older than `stale_after` seconds, or left by a process that has ended,
+    is assumed abandoned and broken.
     """
 
     def __init__(self, path, timeout=10.0, stale_after=600.0):
@@ -272,13 +316,10 @@ class FileLock:
                 self._fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
                 os.write(self._fd, ("%d %s" % (os.getpid(), now_iso())).encode())
                 return self
-            except FileExistsError:
-                try:
-                    age = time.time() - self.path.stat().st_mtime
-                    if age > self.stale_after:
-                        self.path.unlink()
-                        continue
-                except FileNotFoundError:
+            except (FileExistsError, PermissionError) as e:
+                _raise_unless_busy(e)
+                if _lock_is_stale(self.path, self.stale_after):
+                    _remove_lock(self.path)
                     continue
                 if time.time() > deadline:
                     raise BrainError(
@@ -292,9 +333,10 @@ class FileLock:
         try:
             if self._fd is not None:
                 os.close(self._fd)
-            self.path.unlink()
         except OSError:
             pass
+        self._fd = None
+        _remove_lock(self.path)
         return False
 
 
