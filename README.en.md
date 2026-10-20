@@ -1,17 +1,23 @@
-# brainlib
+# `brainlib`
 
 **Your own AI brain library. One copy shared by the AI assistants you connect, and it knows you better the longer you use it.**
 
 [中文](README.md)
 
-brainlib is a small harness I hacked together. Every time I switched models or started a new project with an AI, I had to explain all the context again from scratch, and agents that ran for a long time lost their long-term memory and started hallucinating.
+`brainlib` is a small harness I hacked together. Every time I switched models or started a new project with an AI, I had to explain all the context again from scratch, and agents that ran for a long time lost their long-term memory and started hallucinating.
 
-brainlib maintains a "brain library" folder on your own computer. Any local AI agent can work with it, and after each conversation it writes down what it learned, so switching models doesn't lose what your agents knew about you (it's agent-agnostic). It has three modules. The capturer puts your preferences, decisions and the like into a buffer first, each labeled with where it came from. The organizer turns the buffer into suggested changes to the brain library. The maintainer gives the library regular health checks and archives what's outdated.
+`brainlib` maintains a "brain library" folder on your own computer. Any local AI agent can work with it, and after each conversation it writes down what it learned, so switching models doesn't lose what your agents knew about you (it's agent-agnostic). It has three modules. The capturer puts your preferences, decisions and the like into a buffer first, each labeled with where it came from. The organizer turns the buffer into suggested changes to the brain library. The maintainer gives the library regular health checks and archives what's outdated.
 
-To install, tell the agent in Cursor, Claude Code, Codex or a similar tool: "Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me." After that, whenever you start a new agent conversation, have it read what's in the brainlib folder first.
+**Installing takes one sentence.** In Cursor, Claude Code, Codex or a similar tool, send this to the agent.
+
+```text
+Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me.
+```
+
+After that, whenever you start a new agent conversation, have it read what's in the `brainlib` folder first.
 
 > [!IMPORTANT]
-> **It only works with an AI that can operate your computer.** brainlib reads and writes your notes and runs commands on your computer, so it needs an agent with access to your machine, such as Cursor, Claude Code or Codex. AIs that only chat in a browser or a phone app, such as ChatGPT, Doubao or Kimi on the web, can't reach your computer and can't connect. That is by design, not a bug. Cloud agents can't connect by default either, unless the brain library is in a sync folder and that agent can really read and write the folder and run brainlib commands on the machine it runs on.
+> **It only works on a computer.** `brainlib` reads and writes your notes and runs commands on your computer, so it only works with an AI that can operate your machine, such as Cursor, Claude Code or Codex. AIs in a browser or a phone app can't connect; that is by design.
 
 Only installed for real on Mac and Linux so far.
 
@@ -41,9 +47,9 @@ After sending that sentence, answer its questions. It asks which language you wa
 
 Once connected, every new conversation reads the brain library first without you asking. For tools like Claude Code and Codex, it adds a few lines to their global instructions; for tools like Cursor and Trae, it gives you a short text to paste into their settings. Everything it adds is marked and can be removed at any time.
 
-After installing, three things are new on your computer: the brainlib program in your home folder (for example `~/brainlib`), the brain library in the folder you chose, and brainlib's own records and the buffer in `~/.brainlib`. Nothing runs in the background; brainlib runs only when an AI calls it. Apart from updating itself, it asks you before installing anything or changing any tool's settings.
+After installing, three things are new on your computer: the `brainlib` program in your home folder (for example `~/brainlib`), the brain library in the folder you chose, and `brainlib`'s own records and the buffer in `~/.brainlib`. Nothing runs in the background; `brainlib` runs only when an AI calls it. Apart from updating itself, it asks you before installing anything or changing any tool's settings.
 
-brainlib keeps itself up to date. When the AI runs `brainlib next`, brainlib checks GitHub for a new release at most once a day; if there is one, the AI updates right away and then tells you what changed. An update replaces only the brainlib program and never touches your notes; the lines brainlib added to your tools' instructions are refreshed too, with backups of the old files. If you don't want automatic updates, tell the AI and it will run `brainlib update --off`.
+`brainlib` keeps itself up to date. When the AI runs `brainlib next`, `brainlib` checks GitHub for a new release at most once a day; if there is one, the AI updates right away and then tells you what changed. An update replaces only the `brainlib` program and never touches your notes; the lines `brainlib` added to your tools' instructions are refreshed too, with backups of the old files. If you don't want automatic updates, tell the AI and it will run `brainlib update --off`.
 
 You need Python 3.9 or newer. If you don't have it, the AI asks you first and then helps you install it. age (for the vault) and git are optional.
 
@@ -65,18 +71,18 @@ Your starting level depends on how you answer the setup questions, and you can c
 
 ## Privacy
 
-**What brainlib guarantees.**
+**What `brainlib` guarantees.**
 
 - Search, read, the index and the MCP interface never return private notes, not even their titles.
 - Passwords, secret keys, ID numbers and bank card numbers are refused in notes and edits. Ones already in your notes are hidden when shown to the AI.
 - The vault is encrypted with [age](https://github.com/FiloSottile/age). Only you can type its passphrase, in a terminal window, so the AI can't open it. The vault is optional and off by default.
 - Change records and check reports never copy your notes. They record only which note changed and who approved it.
 - Before sharing your brain library with anyone, you can scan it against your own private word list (real names, company, address and so on), and it passes only with zero matches.
-- brainlib goes online only to update itself: at most once a day it asks GitHub for the latest version number, and it downloads a new release from GitHub when there is one. The requests carry none of your notes or personal details; GitHub sees only your IP address and the brainlib version. You can turn this off.
+- `brainlib` goes online only to update itself: at most once a day it asks GitHub for the latest version number, and it downloads a new release from GitHub when there is one. The requests carry none of your notes or personal details; GitHub sees only your IP address and the `brainlib` version. You can turn this off.
 
 **A few things it can't do.**
 
-- An AI's own file-reading tools may still be able to read private files that aren't encrypted. brainlib tells it not to and ships permission settings for common tools, but the safest place for private content is the vault.
+- An AI's own file-reading tools may still be able to read private files that aren't encrypted. `brainlib` tells it not to and ships permission settings for common tools, but the safest place for private content is the vault.
 - File names inside the vault are visible.
 - Your sync provider can see notes that aren't encrypted.
 - What the AI reads is sent to the company behind its model, just as when you use that AI anywhere else.
@@ -85,9 +91,11 @@ Your starting level depends on how you answer the setup questions, and you can c
 
 **How is this different from ChatGPT's built-in memory?** What ChatGPT remembers only helps inside ChatGPT; switch to Cursor and it's gone. The brain library is plain files on your computer, every AI you connect reads the same copy, and each entry says whether you said it or the AI guessed it.
 
-**Does it cost anything? Can I use it at work?** brainlib is free; the AI tools you use charge their own prices. Using it yourself is free, and that includes your own work, such as managing your own notes on a work computer. Deploying it for other people, building it into a product or using it to provide a service needs a license from me first.
+**Does it cost anything? Can I use it at work?** `brainlib` is free; the AI tools you use charge their own prices. Using it yourself is free, and that includes your own work, such as managing your own notes on a work computer. Deploying it for other people, building it into a product or using it to provide a service needs a license from me first.
 
-**I only use ChatGPT, Doubao or Kimi in a browser or on my phone. Can I use it?** No, and that is by design: brainlib has to read and write files and run commands on your computer, which an AI in a browser or a phone app can't do. Claude Desktop can connect through MCP (a standard way for AI tools to call outside programs); see [docs/mcp.md](docs/mcp.md).
+**I only use ChatGPT, Doubao or Kimi in a browser or on my phone. Can I use it?** No, and that is by design: `brainlib` has to read and write files and run commands on your computer, which an AI in a browser or a phone app can't do. Claude Desktop can connect through MCP (a standard way for AI tools to call outside programs); see [docs/mcp.md](docs/mcp.md).
+
+**Can a cloud agent use it?** Not by default. Only if the brain library is in a sync folder and that agent can really read and write the folder and run `brainlib` commands on the machine it runs on.
 
 **Reading the brain library at the start of every conversation, won't that be slow or use up my quota?** It reads only a few core pages each time and looks up the rest when needed. However big the library gets, each conversation reads those few pages plus whatever it finds.
 
@@ -113,7 +121,7 @@ This section is for readers who want to know how it works inside.
 
 ### The parts
 
-brainlib is a command-line program that uses only Python's standard library and never runs in the background. When an AI calls it from the command line, it does one thing and exits; over MCP, the AI tool starts it and it exits when the tool closes.
+`brainlib` is a command-line program that uses only Python's standard library and never runs in the background. When an AI calls it from the command line, it does one thing and exits; over MCP, the AI tool starts it and it exits when the tool closes.
 
 ```mermaid
 flowchart LR
@@ -125,7 +133,7 @@ flowchart LR
     B -.->|"at most once a day, version number only"| G["GitHub releases"]
 ```
 
-The brain library folder holds your notes. brainlib adds only a settings file, `.brainlib/config.json`, and a new library also gets an `AGENTS.md` for AIs to read. Everything else brainlib keeps lives outside the library in `~/.brainlib`, so putting the library in a sync folder doesn't sync the buffer or suggested changes you haven't approved yet:
+The brain library folder holds your notes. `brainlib` adds only a settings file, `.brainlib/config.json`, and a new library also gets an `AGENTS.md` for AIs to read. Everything else `brainlib` keeps lives outside the library in `~/.brainlib`, so putting the library in a sync folder doesn't sync the buffer or suggested changes you haven't approved yet:
 
 ```text
 ~/.brainlib/
@@ -155,7 +163,7 @@ flowchart TD
 - Every record carries the time it was said, to the minute, and the newest statement about the same thing counts. When the AI records a new statement with `--replaces "<a few words of the old one>"`, organizing produces a replace-this-line suggestion and keeps the old wording in brackets at the end of the new line. If the old statement is still in the buffer, only the new one goes into the note and the old one stays in the log. An older line that merely looks alike, without `--replaces`, is only pointed out in the suggestion, never replaced automatically.
 - Writes are checked first. Replacing a whole note requires that the note hasn't changed since the suggestion was made; replacing a line requires that the line is still there. If not, nothing is written and the suggestion is marked out of date (exit code 5). A change that needs your yes is not written without your words (exit code 4).
 - Receipts record which note changed, its hashes before and after, and who approved, never the content.
-- Only one brainlib command runs at a time; the others wait. A lock left behind by a crashed process is recognized and cleared by the next command.
+- Only one `brainlib` command runs at a time; the others wait. A lock left behind by a crashed process is recognized and cleared by the next command.
 
 ### How the AI finds what it needs
 
@@ -232,9 +240,9 @@ tests/             Tests
 
 ## License
 
-brainlib is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). Individuals can use, modify and share it free of charge for personal use, research, study and hobby projects, and so can charities, schools, public research organizations and government institutions.
+`brainlib` is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). Individuals can use, modify and share it free of charge for personal use, research, study and hobby projects, and so can charities, schools, public research organizations and government institutions.
 
-**Additional permission.** The developer also permits individuals to use brainlib free of charge in their own work, for example to manage their own notes on a work computer. Deploying it for others, building it into a product or using it to provide a service still requires a commercial license.
+**Additional permission.** The developer also permits individuals to use `brainlib` free of charge in their own work, for example to manage their own notes on a work computer. Deploying it for others, building it into a product or using it to provide a service still requires a commercial license.
 
 Any other commercial use is not allowed, and the licensor keeps all commercial rights. For a commercial license, contact the developer through GitHub (github.com/mingweima/brainlib). This is a summary; the LICENSE text and the additional permission above govern.
 

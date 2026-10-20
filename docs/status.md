@@ -43,8 +43,8 @@
   After an update the new version takes over: it rebuilds every library's index, refreshes the lines brainlib added to tool instructions (with a backup), replaces a library `AGENTS.md` that an older version wrote and nobody edited, and lists what changed. The same happens on the next `next` after a manual `git pull` or a replaced folder.
 - 旧说法还在缓存区、没整理进笔记时，`--replaces` 也认得出。整理时只有新说法进笔记，带上旧说法的括号；旧的那条标成已被替换，留在日志里，索引不再列它；它要是已经单独等着用户批，那条建议作废。以前这种情况两句都会进笔记。
   `--replaces` now also finds an older statement that is still in the buffer. Organizing files only the newer one, with the old wording in brackets; the older item is marked replaced, stays in the log and drops out of the index, and a proposal still waiting for it is withdrawn. Before, both lines went into the note.
-- README 开头写明只能接能操作本机的 AI，网页和手机上的 AI 接不上；新加「机制和运行逻辑」一节，用流程图讲部件、写入、读取、`next` 的顺序和自动更新；「用起来是什么样」换成了学术和技术方面的例子，技能说明和 AI 自测题里的例子也一起换了。
-  The README now says up front that brainlib needs an AI that can operate your computer, and gains a "How it works inside" section with flowcharts of the parts, writing, reading, the order `next` follows, and updates. The examples are now academic and technical, in the skill guides and the agent self-check too.
+- README 开头用一两句话写明只有在电脑上才能用，安装那句话放进了能一键复制的代码块，正文里的 `brainlib` 都用代码字体；新加「机制和运行逻辑」一节，用流程图讲部件、写入、读取、`next` 的顺序和自动更新；「用起来是什么样」换成了学术和技术方面的例子，技能说明和 AI 自测题里的例子也一起换了。
+  The README now says up front, in a sentence or two, that brainlib only works on a computer; the install sentence sits in a code block you can copy with one click, and `brainlib` is in code font throughout. It also gains a "How it works inside" section with flowcharts of the parts, writing, reading, the order `next` follows, and updates. The examples are now academic and technical, in the skill guides and the agent self-check too.
 - 小修。`AGENTS.md` 里「六条铁律」其实有八条（英文版七条），标题改对了。
   Small fix: the "Six Iron Rules" heading sat over eight rules in the Chinese `AGENTS.md` and seven in the English one; both headings now give the right number.
 - 旧库不用迁移。
