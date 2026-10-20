@@ -323,7 +323,7 @@ def history_of(text):
 
 
 def history_note(old_when, old_text, lang):
-    """The trace a replaced line leaves: （10-13 说的是：不喝咖啡）."""
+    """The trace a replaced line leaves: （10-13 说的是：聚类到公司层面）."""
     old = strip_history(old_text)
     if len(old) > 60:
         old = old[:59].rstrip() + "…"
@@ -340,6 +340,22 @@ def squash(text):
     """Comparable form: no labels, no history note, no punctuation or spaces, lower case."""
     t = _MARK.sub("", strip_history(text or ""))
     return re.sub(r"[\W_]+", "", t.lower())
+
+
+def replaced_item(new, items):
+    """The latest item said no later than `new` whose words contain what `new` replaces, or None."""
+    want = squash(new.get("replaces"))
+    if not want:
+        return None
+    mine = time_key(new.get("said_at") or new.get("captured_at") or new.get("when"))
+    best = None
+    for it in items:
+        if it.get("id") == new.get("id") or want not in squash(it.get("text")):
+            continue
+        when = time_key(it.get("said_at") or it.get("captured_at") or it.get("when"))
+        if when <= mine and (best is None or when > best[0]):
+            best = (when, it)
+    return best[1] if best else None
 
 
 def similarity(a, b):
@@ -554,6 +570,17 @@ def collect(lib, include_duplicates=False):
             recs.append(_item_record(it, lang))
         elif it["status"] == "duplicate":
             restated.append(it)
+    unfiled = [r for r in recs if r["source"] == "inbox"]
+    for r in unfiled:
+        old = replaced_item(r, unfiled)
+        if old:
+            old["superseded_by"] = "inbox:%s" % r["id"]
+    if not include_duplicates:
+        recs = [r for r in recs if not (r["source"] == "inbox" and r.get("superseded_by"))]
+    else:
+        for r in recs:
+            if r["source"] == "inbox" and r.get("superseded_by"):
+                r["twin"] = True
     filed, replaced = {}, []
     for r in recs:
         if r["source"] != "journal":

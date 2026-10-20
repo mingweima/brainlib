@@ -15,6 +15,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from . import __version__
+
 
 def _sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -51,10 +53,15 @@ def run(verbose=False):
     from . import agentcheck, config, mcp
 
     tmp = Path(tempfile.mkdtemp(prefix="brainlib-selftest-"))
-    saved = {k: os.environ.get(k) for k in ("BRAINLIB_HOME", "BRAINLIB_PREFIX", "BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_VAULT_IDENTITY")}
+    names = (
+        "BRAINLIB_HOME", "BRAINLIB_PREFIX", "BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_VAULT_IDENTITY",
+        "BRAINLIB_NO_UPDATE_CHECK", "BRAINLIB_UPDATE_FEED",
+    )
+    saved = {k: os.environ.get(k) for k in names}
     os.environ["BRAINLIB_HOME"] = str(tmp / "home")
     os.environ["BRAINLIB_PREFIX"] = "brainlib"
-    for k in ("BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_VAULT_IDENTITY"):
+    os.environ["BRAINLIB_NO_UPDATE_CHECK"] = "1"
+    for k in ("BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_VAULT_IDENTITY", "BRAINLIB_UPDATE_FEED"):
         os.environ.pop(k, None)
     r = _Run(verbose)
     try:
@@ -189,6 +196,20 @@ def run(verbose=False):
             init["result"]["protocolVersion"] == "2025-06-18" and len(tools["result"]["tools"]) >= 10 and not call["result"]["isError"],
             json.dumps(call, ensure_ascii=False),
         )
+
+        feed = tmp / "release.json"
+        feed.write_text(json.dumps({"tag_name": "v99.0.0"}), encoding="utf-8")
+        gs = config.global_state()
+        gs["update"] = {"seen_version": __version__}
+        config.save_global_state(gs)
+        os.environ["BRAINLIB_UPDATE_FEED"] = str(feed)
+        os.environ.pop("BRAINLIB_NO_UPDATE_CHECK", None)
+        try:
+            code, out = r.cli("next", *lib)
+        finally:
+            os.environ["BRAINLIB_NO_UPDATE_CHECK"] = "1"
+            os.environ.pop("BRAINLIB_UPDATE_FEED", None)
+        r.check("next says when a newer release is out (read from a local file here)", "brainlib 99.0.0 is out" in out and "RUN: brainlib update" in out, out)
 
         if shutil.which("age") and shutil.which("age-keygen"):
             ident = tmp / "test-identity.txt"

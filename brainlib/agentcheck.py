@@ -34,18 +34,18 @@ def is_small_model(name):
 PROVENANCE_POOL = [
     {
         "answer": "said",
-        "zh": "用户说：“我早上只喝茶，不喝咖啡。”",
-        "en": 'The user said: "I only drink tea in the morning, never coffee."',
+        "zh": "用户说：“论文里的图一律导出成矢量 PDF。”",
+        "en": 'The user said: "Export every figure in a paper as vector PDF."',
     },
     {
         "answer": "inferred",
-        "zh": "你注意到用户三次都在晚上十点以后发消息，于是认为他是夜猫子。",
-        "en": "You noticed the user messaged after 10 pm three times, so you conclude they are a night owl.",
+        "zh": "你注意到用户的三个项目都是用 Python 写的，于是认为他主要用 Python。",
+        "en": "You noticed all three of the user's projects are written in Python, so you conclude they mainly use Python.",
     },
     {
         "answer": "external",
-        "zh": "一篇网上文章说，绿茶的咖啡因比咖啡少。",
-        "en": "A web article says green tea has less caffeine than coffee.",
+        "zh": "一篇 arXiv 预印本说，这个基准的测试集泄漏进了训练数据。",
+        "en": "An arXiv preprint says this benchmark's test set leaked into the training data.",
     },
 ]
 

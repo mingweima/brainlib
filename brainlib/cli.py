@@ -33,6 +33,7 @@ from . import (
     provenance,
     records,
     scan,
+    update,
     vault,
 )
 from .scan import build_entry
@@ -58,7 +59,7 @@ MAX_READ_BYTES = 200_000
 SUBCOMMANDS = (
     "next", "init", "adopt", "scan", "index", "log", "find", "read", "health", "lint", "note", "inbox", "classify",
     "propose", "review", "apply", "reject", "defer", "undo", "onboard", "privacy", "hooks", "vault", "mcp",
-    "selftest", "version", "lang", "doctor", "agent-check", "connect",
+    "selftest", "version", "lang", "doctor", "agent-check", "connect", "update",
 )
 _CMD_RE = re.compile(r"(?<![\w/\\.-])brainlib (?=(?:%s)\b)" % "|".join(sorted(SUBCOMMANDS, key=len, reverse=True)))
 
@@ -187,13 +188,17 @@ def _detect_zones(root):
     return zones
 
 
-def _write_agents_file(root):
-    lang = i18n.normalize(config.global_state().get("lang")) or i18n.DEFAULT_LANG
+def agents_text(root, lang):
+    """The AGENTS.md brainlib writes into a library folder."""
     name = "AGENTS.zh.md" if lang == "zh" and (TEMPLATES / "AGENTS.zh.md").is_file() else "AGENTS.md"
     text = (TEMPLATES / name).read_text(encoding="utf-8")
     text = text.replace("{BRAINLIB_CMD}", brainlib_cmd()).replace("{LIBRARY}", str(Path(root).resolve()))
-    text = text.replace("{WRITING_SKILL}", str(nextstep.WRITING_SKILL))
-    (Path(root) / "AGENTS.md").write_text(text, encoding="utf-8")
+    return text.replace("{WRITING_SKILL}", str(nextstep.WRITING_SKILL))
+
+
+def _write_agents_file(root):
+    lang = i18n.normalize(config.global_state().get("lang")) or i18n.DEFAULT_LANG
+    (Path(root) / "AGENTS.md").write_text(agents_text(root, lang), encoding="utf-8")
 
 
 def cmd_init(args):
@@ -225,6 +230,7 @@ def cmd_init(args):
         values["lang"] = args.lang
     config.write_config(root, values)
     config.register(root, make_default=True)
+    update.remember_version()
     lib = config.load(str(root))
     scan.scan_library(lib)
     _emit(
@@ -255,6 +261,7 @@ def cmd_adopt(args):
     if values:
         config.write_config(root, values)
     config.register(root, make_default=True)
+    update.remember_version()
     if args.agents_file:
         if (root / "AGENTS.md").exists():
             raise BrainError("AGENTS.md already exists in that folder; it was left alone.", fix="Leave out --agents-file.")
@@ -292,10 +299,59 @@ def cmd_next(args):
         return EXIT_OK
     lang = _lang(args, lib)
     lang_chosen = bool(i18n.normalize(config.global_state().get("lang")) or (lib and i18n.normalize(lib.config.get("lang"))))
+    notices, info = update.on_next(lang)
     s = nextstep.preflight(_actor(args), lang, lang_chosen)
     if s is None:
         s = nextstep.no_library(lang) if lib is None else nextstep.compute(lib, lang=lang)
-    _emit(args, s, nextstep.render(s))
+    if info and info["available"]:
+        s["update"] = {"latest": info["latest"], "current": info["current"], "run": "brainlib update"}
+    _emit(args, dict(s, notices=notices), "\n".join(notices + [nextstep.render(s)]))
+    return EXIT_OK
+
+
+def cmd_update(args):
+    lang = _lang(args)
+    if args.adapt is not None:
+        r = update.adapt(args.adapt or None, old_program=args.old_program)
+        _emit(args, r, update.render_adapt(r, lang))
+        return EXIT_OK
+    if args.off or args.on:
+        update.set_auto(args.on)
+        print(
+            "OK: brainlib will check for new releases once a day and update itself." if args.on else
+            "OK: brainlib will no longer check for new releases. `brainlib update` still works when run by hand."
+        )
+        return EXIT_OK
+    info = update.check(force=True)
+    if info["error"] or not info["latest"]:
+        print(
+            "COULD NOT CHECK: %s\nNothing was changed. Try again later; if it keeps failing, the user can download the "
+            "release from %s" % (info["error"] or "no release found", update.RELEASES)
+        )
+        return EXIT_FINDINGS
+    if not info["available"]:
+        print("UP TO DATE: brainlib %s is the latest release.\nTHEN: run `brainlib next` again." % __version__)
+        return EXIT_OK
+    if args.check:
+        off = update.checks_off()
+        print(
+            "AVAILABLE: brainlib %s is out (this computer has %s).%s\nRUN: brainlib update"
+            % (info["latest"], __version__, " Automatic checks are off: %s." % off if off else "")
+        )
+        return EXIT_OK
+    done = update.install({"version": info["latest"], "tag": info["tag"]})
+    if done["command"]:
+        print(
+            "NEXT: brainlib was installed with pip, so pip has to update it. Run this, then run `brainlib next`; "
+            "it finishes the update by itself.\nRUN: %s" % done["command"]
+        )
+        return EXIT_OK
+    code, out = update.run_adapt(update.PROGRAM_DIR, __version__, done["backup"])
+    lines = ["OK: the program files are now brainlib %s (%s)." % (info["latest"], "git" if done["kind"] == "git" else "zip")]
+    if done["backup"]:
+        lines.append("  The old version was backed up to %s" % done["backup"])
+    lines.append(out if code == 0 else "The new version could not finish setting up (%s); `brainlib next` will try again." % out)
+    print("\n".join(lines))
     return EXIT_OK
 
 
@@ -321,7 +377,7 @@ def cmd_doctor(args):
     return EXIT_OK
 
 
-def _standalone_cmd():
+def standalone_cmd():
     """Like brainlib_cmd(), but always runnable from a fresh terminal (MCP sets a bare `brainlib` prefix)."""
     prefix = brainlib_cmd()
     if prefix == "brainlib" and not shutil.which("brainlib"):
@@ -337,7 +393,7 @@ def _standalone_cmd():
 def cmd_connect(args):
     lib = _lib(args)
     lang = _lang(args, lib)
-    cmd = _standalone_cmd()
+    cmd = standalone_cmd()
     if args.tool and (args.write or args.remove):
         r = connect.remove(args.tool) if args.remove else connect.write(lib, args.tool, cmd, lang)
         if r["changed"]:
@@ -831,6 +887,11 @@ def cmd_classify(args):
             lines.append(
                 "  %d item(s) were already in the notes, so the notes stay as they are; the journal gets the new time."
                 % s["duplicates"]
+            )
+        if s.get("replaced"):
+            lines.append(
+                "  %d earlier statement(s) were replaced by newer ones before reaching a note; only the newer ones "
+                "go in, and the journal keeps both." % s["replaced"]
             )
         if s.get("logged"):
             lines.append("  %d item(s) also go into the journal of the day they were said, in time order." % s["logged"])
@@ -1350,6 +1411,12 @@ def build_parser():
     add("mcp", cmd_mcp, "run as an MCP server on stdin/stdout")
     s = add("selftest", cmd_selftest, "check that brainlib works on this computer")
     s.add_argument("--verbose", action="store_true")
+    s = add("update", cmd_update, "update brainlib to the latest release (it also checks once a day by itself)")
+    s.add_argument("--check", action="store_true", help="only say whether a newer release is out")
+    s.add_argument("--off", action="store_true", help="stop the daily check")
+    s.add_argument("--on", action="store_true", help="turn the daily check back on")
+    s.add_argument("--adapt", nargs="?", const="", default=None, metavar="OLD_VERSION", help=argparse.SUPPRESS)
+    s.add_argument("--old-program", default=None, help=argparse.SUPPRESS)
     add("version", cmd_version, "print the version")
     add("help", cmd_help, "list all commands")
     return p

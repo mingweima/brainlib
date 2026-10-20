@@ -21,3 +21,5 @@ AGENTS.md github.com/mingweima/brainlib
 AGENTS.en.md github.com/mingweima/brainlib
 pyproject.toml Mingwei Ma
 pyproject.toml github.com/mingweima/brainlib
+brainlib/update.py mingweima/brainlib
+docs/threat-model.md mingweima/brainlib

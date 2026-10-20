@@ -56,3 +56,4 @@ Windows:
 | kb_classify | `brainlib classify` |
 | kb_proposals | `brainlib review` |
 | kb_decide | `apply` / `reject` / `defer`; apply and reject need `user_confirmed: true` and the user's words |
+| kb_update | `brainlib update` (`check: true` only says whether a newer release is out). After an update, restart the app that runs the MCP server so it loads the new version. |

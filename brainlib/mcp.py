@@ -19,7 +19,8 @@ INSTRUCTIONS = (
     "brainlib manages the user's personal knowledge library. Start every session with kb_next and follow it. "
     "When its output says `RUN: brainlib <command>`, call the matching tool: next->kb_next, agent-check->kb_agent_check, "
     "lang->kb_lang, find->kb_find, read->kb_read, index->kb_index, log->kb_log, health->kb_health, note->kb_note, "
-    "onboard->kb_onboard, classify->kb_classify, review->kb_proposals, apply/reject/defer->kb_decide, doctor->kb_doctor. "
+    "onboard->kb_onboard, classify->kb_classify, review->kb_proposals, apply/reject/defer->kb_decide, doctor->kb_doctor, "
+    "update->kb_update. "
     "Never claim the user approved something they did not approve. Never ask for the vault passphrase."
 )
 
@@ -89,6 +90,11 @@ TOOLS = [
             "the user's own words. Never set them unless the user really said so."
         ),
         "inputSchema": _s("", id=STR, decision=STR, user_confirmed=BOOL, user_words=STR),
+    },
+    {
+        "name": "kb_update",
+        "description": "Update brainlib to the latest release when kb_next says UPDATE. check=true only says whether one is out.",
+        "inputSchema": _s("", check=BOOL),
     },
 ]
 for _t in TOOLS:
@@ -209,6 +215,8 @@ def _argv_for(name, a, library):
         if decision == "apply":
             argv += ["--user-said", g("user_words")]
         return argv
+    if name == "kb_update":
+        return ["update"] + (["--check"] if g("check") else [])
     raise _Fail("unknown tool %s" % name)
 
 

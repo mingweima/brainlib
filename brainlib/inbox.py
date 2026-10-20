@@ -23,7 +23,7 @@ from .util import (
 
 MAX_TEXT = 4000
 SOURCE_KINDS = ("conversation", "note", "annotation", "feedback", "interaction", "import", "connector")
-STATUSES = ("pending", "proposed", "applied", "rejected", "deferred", "duplicate", "private-held")
+STATUSES = ("pending", "proposed", "applied", "rejected", "deferred", "duplicate", "private-held", "replaced")
 NOT_FILED = ("pending", "proposed", "deferred")
 
 

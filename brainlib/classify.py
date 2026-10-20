@@ -14,8 +14,10 @@ Every item gets its own proposal, so the user can take some and leave others. Ev
 is also written into the journal of the day it was said, in time order, one proposal per
 day (turn this off with "daily_log": false). An item a note already holds leaves the note
 alone and is only logged, as said again. An item with `replaces` becomes a replace-line
-proposal that keeps a short trace of the old wording; one that merely looks like an older
-line only gets a hint, because looking alike is not the same as changing one's mind.
+proposal that keeps a short trace of the old wording; when the older statement is still in
+the inbox, only the newer one is filed and the older one stays in the journal. One that
+merely looks like an older line only gets a hint, because looking alike is not the same as
+changing one's mind.
 
 Backends
 - rules (default, no AI needed): as above.
@@ -228,6 +230,59 @@ def _look_alike(text, item_text, when):
     return {"line": best[1], "when": best[2]["when"], "text": best[2]["text"]}
 
 
+def _unfiled_replacements(lib, items, everything, lang, dry_run):
+    """Earlier statements, not in a note yet, that items in this run replace (--replaces).
+
+    Returns {new item id: {"old", "when", "waiting"}} and [(old item id, new item)], oldest first.
+    An older item in this run is planned as superseded; one waiting alone in its own proposal has
+    that proposal retired; one still pending from before is marked replaced."""
+    open_items = [
+        i for i in everything
+        if i["status"] in inbox.NOT_FILED and i.get("text") and i.get("sensitivity") != "private"
+    ]
+    in_run = {i["id"] for i in items}
+    found, superseded = {}, []
+    for it in items:
+        if not it.get("replaces"):
+            continue
+        old = records.replaced_item(it, open_items)
+        if not old:
+            continue
+        when = records.item_tags(old, lang)["when"]
+        info = {"old": old, "when": when, "waiting": None}
+        if old["id"] in in_run:
+            superseded.append((records.time_key(when), old["id"], it))
+        else:
+            outcome = "gone" if old["status"] == "pending" else _retire_waiting(lib, old, dry_run)
+            if outcome == "kept":
+                info["waiting"] = old.get("status_ref")
+            elif outcome != "journal" and not dry_run:
+                inbox.set_status(lib, old["id"], "replaced", ref=it["id"])
+        found[it["id"]] = info
+    superseded.sort(key=lambda row: row[0])
+    return found, [(old_id, it) for _key, old_id, it in superseded]
+
+
+def _retire_waiting(lib, old, dry_run):
+    """What to do with the proposal an older, replaced statement waits in: 'retired' when it held only
+    that statement, 'journal' when the statement only waits to be logged, 'kept' when the proposal holds
+    more, 'gone' when it is no longer open."""
+    pid = old.get("status_ref")
+    try:
+        p = proposals.get(lib, pid) if pid else None
+    except BrainError:
+        p = None
+    if not p or p["status"] not in proposals.OPEN_STATES:
+        return "gone"
+    if records.in_journal(lib, p["target"]):
+        return "journal"
+    if [e.get("item") for e in p.get("evidence") or [] if e.get("role") != "log"] != [old["id"]]:
+        return "kept"
+    if not dry_run:
+        proposals.retire(lib, pid, "the user said something newer that replaces it")
+    return "retired"
+
+
 def _short_day(when):
     d = records.day_of(when)
     return "%d-%d" % (int(d[5:7]), int(d[8:10])) if when and not d.startswith("0000") else "earlier"
@@ -259,7 +314,11 @@ def _plan(lib, it, settings_ctx):
         if old:
             plan.update(op="replace_line", target=old["path"], old=old, journal=False)
             return plan
-        plan["replaces_missing"] = True
+        unfiled = ctx["replaced_items"].get(it["id"])
+        if unfiled:
+            plan["unfiled_old"] = unfiled
+        else:
+            plan["replaces_missing"] = True
     body = _read(lib, target)
     if journal:
         want = records.squash(it["text"])
@@ -303,6 +362,14 @@ def _reason(plan, lang):
         why = "Did not clearly fit any note, so it is parked here for the user to sort."
     if plan.get("replaces_missing"):
         why += " It was meant to replace an older line (%r), which was not found, so it is added instead." % it["replaces"]
+    unfiled = plan.get("unfiled_old")
+    if unfiled:
+        why += (
+            " The user changed their mind: it replaces %r (said %s), which was not in a note yet, so only the newer "
+            "one goes in." % (unfiled["old"]["text"][:60], _short_day(unfiled["when"]))
+        )
+        if unfiled.get("waiting"):
+            why += " The older one still waits in proposal %s; the user can reject that one." % unfiled["waiting"]
     alike = plan.get("alike")
     if alike:
         why += (
@@ -338,8 +405,9 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False, only=None):
     settings = onboard.settings(lib)
     proposals.require_not_read_only(settings)
     lang = records.lib_lang(lib)
+    everything = inbox.all_items(lib)
     items = [
-        i for i in inbox.all_items(lib)
+        i for i in everything
         if i["status"] == "pending" and i.get("text") and (only is None or i["id"] in only)
     ]
     held = [i for i in items if not onboard.allows_provenance(settings, i["provenance"])]
@@ -349,6 +417,7 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False, only=None):
         "held_by_record_policy": len(held),
         "proposals": [],
         "duplicates": 0,
+        "replaced": 0,
         "logged": 0,
         "auto_applied": 0,
     }
@@ -380,6 +449,7 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False, only=None):
     for r in (read_json(lib.out("records.json")) or {}).get("records") or []:
         if r.get("source") == "note" and r.get("level") != "L3":
             said.setdefault(records.squash(r["text"]), (r["where"], r["line"]))
+    replaced_items, superseded = _unfiled_replacements(lib, items, everything, lang, dry_run)
     ctx = {
         "lang": lang,
         "candidates": candidates,
@@ -388,13 +458,26 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False, only=None):
         "writable": {n["path"] for n in readable if n["authority"] != "archived"},
         "readable": [n["path"] for n in readable if n["authority"] != "archived" and not n.get("stream")],
         "said": said,
+        "replaced_items": replaced_items,
     }
     log_on = lib.config.get("daily_log", True) is not False and records.journal_dir(lib)
     plans = [_plan(lib, it, ctx) for it in items]
+    by_id = {plan["item"]["id"]: plan for plan in plans}
+    for old_id, new in superseded:
+        old_plan, new_plan = by_id.get(old_id), by_id.get(new["id"])
+        if not old_plan:
+            continue
+        if old_plan["op"] == "replace_line" and new_plan and new_plan["op"] != "replace_line":
+            new_plan.update(op="replace_line", target=old_plan["target"], old=old_plan["old"], journal=False)
+        old_plan.update(op="superseded", by=new["id"])
 
     days = {}
     for plan in plans:
-        if plan["journal"] and plan["op"] == "append":
+        if plan["op"] == "superseded":
+            if not log_on:
+                continue
+            role = "log"
+        elif plan["journal"] and plan["op"] == "append":
             role = "file"
         elif log_on and not plan["journal"]:
             role = "log"
@@ -426,6 +509,11 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False, only=None):
     for plan in plans:
         it = plan["item"]
         ev = [{"item": it["id"], "provenance": it["provenance"], "role": "file"}]
+        if plan["op"] == "superseded":
+            summary["replaced"] += 1
+            if not dry_run:
+                inbox.set_status(lib, it["id"], "replaced", ref=plan["by"])
+            continue
         if plan["op"] == "none":
             summary["duplicates"] += 1
             if not dry_run:
@@ -438,7 +526,9 @@ def run(lib, actor="agent/unknown", limit=200, dry_run=False, only=None):
             content = records.format_line(it, lang, history=records.history_note(old["when"], old["text"], lang))
             p = propose("replace_line", plan["target"], content, _reason(plan, lang), ev, old_line=old["raw"])
         else:
-            content = records.format_line(it, lang, with_category=plan["target"] == ctx["fallback"])
+            unfiled = plan.get("unfiled_old")
+            history = records.history_note(unfiled["when"], unfiled["old"]["text"], lang) if unfiled else None
+            content = records.format_line(it, lang, with_category=plan["target"] == ctx["fallback"], history=history)
             p = propose("append", plan["target"], content, _reason(plan, lang), ev, new_note=_new_note(lib, plan["target"], lang))
         if p:
             inbox.set_status(lib, it["id"], "proposed", ref=p["id"])

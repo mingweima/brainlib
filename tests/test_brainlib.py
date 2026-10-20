@@ -14,6 +14,7 @@ import sys
 import tempfile
 import time
 import unittest
+import zipfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -34,6 +35,7 @@ from brainlib import (  # noqa: E402
     proposals,
     records,
     scan,
+    update,
 )
 from brainlib.util import BrainError, FileLock, atomic_write, command_lock, today, write_json  # noqa: E402
 
@@ -52,10 +54,17 @@ def make_id():
 class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="brainlib-test-")).resolve()  # Windows may hand out 8.3 short names; brainlib writes the long form
-        self._env = {k: os.environ.get(k) for k in ("BRAINLIB_HOME", "BRAINLIB_PREFIX", "BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_PRIVATE_WORDS")}
+        self._env = {
+            k: os.environ.get(k)
+            for k in (
+                "BRAINLIB_HOME", "BRAINLIB_PREFIX", "BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_PRIVATE_WORDS",
+                "BRAINLIB_NO_UPDATE_CHECK", "BRAINLIB_UPDATE_FEED",
+            )
+        }
         os.environ["BRAINLIB_HOME"] = str(self.tmp / "home")
         os.environ["BRAINLIB_PREFIX"] = "brainlib"
-        for k in ("BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_PRIVATE_WORDS"):
+        os.environ["BRAINLIB_NO_UPDATE_CHECK"] = "1"
+        for k in ("BRAINLIB_LIBRARY", "BRAINLIB_LANG", "BRAINLIB_PRIVATE_WORDS", "BRAINLIB_UPDATE_FEED"):
             os.environ.pop(k, None)
         self.root = self.tmp / "lib"
         self.root.mkdir()
@@ -500,6 +509,31 @@ class RecordTests(Base):
             proposals.apply(lib, pid, approved_by="human:me", user_words="删吧")
         self.assertEqual(cm.exception.code, 5)
 
+    def test_replacing_a_statement_that_is_not_in_a_note_yet(self):
+        lib = self.lib(self.JOURNAL)
+        self.write("me.md", "---\ntier: L0\n---\n# Me\n")
+        inbox.add(lib, "标准误聚类到公司层面", "said", said_at="2026-10-12 08:00", category="关于我")
+        inbox.add(lib, "标准误按公司和年份双向聚类", "said", said_at="2026-10-20 09:00", category="关于我", replaces="聚类到公司层面")
+        code, out = self.cli("index", "--category", "关于我", "--json", "--library", str(self.root))
+        self.assertEqual([r["text"] for r in json.loads(out)["records"]], ["标准误按公司和年份双向聚类"])
+        s = classify.run(lib)
+        self.assertEqual(s["replaced"], 1)
+        [p] = [p for p in proposals.list_proposals(lib, states=("open",)) if p["target"] == "me.md"]
+        self.assertIn("双向聚类（10-12 说的是：标准误聚类到公司层面）", p["content"])
+        proposals.apply(lib, p["id"], approved_by="human:me", user_words="对")
+        self.assertNotIn("] 标准误聚类到公司层面", (self.root / "me.md").read_text(encoding="utf-8"))
+        self.assertIn("标准误聚类到公司层面", (self.root / "journal/2026-10-12.md").read_text(encoding="utf-8"))
+        inbox.add(lib, "画图统一用 matplotlib", "said", said_at="2026-10-13 10:00", category="关于我")
+        classify.run(lib)
+        [waiting] = [p for p in proposals.list_proposals(lib, states=("open",)) if "matplotlib" in p["content"]]
+        inbox.add(lib, "画图改用 plotnine", "said", said_at="2026-10-20 10:00", category="关于我", replaces="matplotlib")
+        classify.run(lib)
+        self.assertEqual(proposals.get(lib, waiting["id"])["status"], "stale")
+        [p] = [p for p in proposals.list_proposals(lib, states=("open",)) if p["target"] == "me.md"]
+        self.assertIn("plotnine（10-13 说的是：画图统一用 matplotlib）", p["content"])
+        statuses = {i["text"]: i["status"] for i in inbox.all_items(lib)}
+        self.assertEqual((statuses["标准误聚类到公司层面"], statuses["画图统一用 matplotlib"]), ("replaced", "replaced"))
+
     def test_index_filters_log_single_characters_health_and_mcp(self):
         self.lib(self.JOURNAL)
         self.write(
@@ -582,6 +616,114 @@ class OnboardingTests(Base):
         self.assertEqual(history.count('"question": "Q4"'), 2)
 
 
+class UpdateTests(Base):
+    def feed(self, tag):
+        path = self.tmp / "release.json"
+        path.write_text(json.dumps({"tag_name": tag}), encoding="utf-8")
+        os.environ["BRAINLIB_UPDATE_FEED"] = str(path)
+
+    def program(self, folder, version, extra=()):
+        (folder / "brainlib").mkdir(parents=True)
+        (folder / "brainlib.py").write_text("print('brainlib')\n", encoding="utf-8")
+        (folder / "brainlib" / "__init__.py").write_text('__version__ = "%s"\n' % version, encoding="utf-8")
+        for rel in extra:
+            (folder / rel).write_text("x\n", encoding="utf-8")
+
+    def release_zip(self, name, version, files=()):
+        path = self.tmp / name
+        with zipfile.ZipFile(str(path), "w") as z:
+            z.writestr("brainlib-%s/brainlib.py" % version, "print('new')\n")
+            z.writestr("brainlib-%s/brainlib/__init__.py" % version, '__version__ = "%s"\n' % version)
+            for rel in files:
+                z.writestr(rel, "y\n")
+        return path
+
+    def test_versions_compare_as_numbers(self):
+        self.assertTrue(update.newer("0.10.0", "0.9.9"))
+        self.assertTrue(update.newer("v0.2.1", "0.2.0"))
+        self.assertFalse(update.newer("0.2.0", "v0.2.0"))
+        self.assertFalse(update.newer("latest", "0.2.0"))
+        self.assertTrue(update._official("git" + "@github.com:%s.git" % update.REPO))
+        self.assertTrue(update._official("https://github.com/%s/" % update.REPO))
+        self.assertFalse(update._official("https://github.com/someone/brainlib.git"))
+
+    def test_next_says_once_a_day_when_a_release_is_out_and_can_be_told_not_to(self):
+        self.cli("init", str(self.root))
+        os.environ.pop("BRAINLIB_NO_UPDATE_CHECK")
+        self.feed("v99.0.0")
+        code, out = self.cli("next", "--library", str(self.root))
+        self.assertIn("UPDATE: brainlib 99.0.0 is out", out)
+        self.assertIn("RUN: brainlib update", out)
+        self.assertNotIn("UPDATED:", out)
+        self.feed("v0.0.1")
+        self.assertIn("99.0.0 is out", self.cli("next", "--library", str(self.root))[1])
+        self.assertIn("UP TO DATE", self.cli("update", "--check")[1])
+        self.assertNotIn("UPDATE:", self.cli("next", "--library", str(self.root))[1])
+        self.feed("v99.0.0")
+        self.cli("update", "--off")
+        gs = config.global_state()
+        gs["update"]["checked_at"] = "2020-01-01T00:00:00+00:00"
+        config.save_global_state(gs)
+        self.assertNotIn("UPDATE:", self.cli("next", "--library", str(self.root))[1])
+        self.assertIn("AVAILABLE: brainlib 99.0.0", self.cli("update", "--check")[1])
+
+    def test_a_release_zip_replaces_the_program_after_a_backup(self):
+        prog = self.tmp / "prog"
+        self.program(prog, "0.1.0", extra=("brainlib/gone.py", "my-notes.txt"))
+        backup = update.update_folder(prog, "v0.2.0", "0.2.0", archive=self.release_zip("ok.zip", "0.2.0", ["brainlib-0.2.0/brainlib/new.py"]))
+        self.assertEqual(update._version_in(prog), "0.2.0")
+        self.assertTrue((prog / "brainlib" / "new.py").is_file())
+        self.assertFalse((prog / "brainlib" / "gone.py").exists())
+        self.assertTrue((prog / "my-notes.txt").is_file())
+        self.assertEqual(update._version_in(backup), "0.1.0")
+        for archive in (self.release_zip("evil.zip", "0.3.0", ["../evil.py"]), self.release_zip("wrong.zip", "0.2.5")):
+            with self.assertRaises(BrainError):
+                update.update_folder(prog, "v0.3.0", "0.3.0", archive=archive)
+        self.assertEqual(update._version_in(prog), "0.2.0")
+        self.assertFalse((self.tmp / "evil.py").exists())
+
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_a_git_checkout_only_fast_forwards_to_the_release(self):
+        def git(where, *args):
+            subprocess.run(["git", "-C", str(where), "-c", "user.name=t", "-c", "user.email=t@example.com"] + list(args), check=True, capture_output=True)
+
+        origin, clone = self.tmp / "origin", self.tmp / "clone"
+        self.program(origin, "0.1.0")
+        git(origin, "init", "-q")
+        git(origin, "add", "-A")
+        git(origin, "commit", "-qm", "one")
+        git(self.tmp, "clone", "-q", str(origin), str(clone))
+        (origin / "brainlib" / "__init__.py").write_text('__version__ = "0.2.0"\n', encoding="utf-8")
+        git(origin, "commit", "-qam", "two")
+        git(origin, "tag", "v0.2.0")
+        with self.assertRaises(BrainError) as e:
+            update.update_git(clone, "v0.2.0")
+        self.assertIn("not from the official repository", e.exception.message)
+        update.update_git(clone, "v0.2.0", url=str(origin), check_origin=False)
+        self.assertEqual(update._version_in(clone), "0.2.0")
+        (clone / "brainlib.py").write_text("changed\n", encoding="utf-8")
+        with self.assertRaises(BrainError) as e:
+            update.update_git(clone, "v0.2.0", url=str(origin), check_origin=False)
+        self.assertIn("local changes", e.exception.message)
+
+    def test_adapting_refreshes_only_agents_files_nobody_edited(self):
+        old = self.tmp / "old"
+        (old / update.TEMPLATE_DIR).mkdir(parents=True)
+        (old / update.TEMPLATE_DIR / "AGENTS.md").write_text('# Old rules\nRun {BRAINLIB_CMD} next --library "{LIBRARY}"\n', encoding="utf-8")
+        mine = self.tmp / "mine"
+        for root in (self.root, mine):
+            self.cli("init", str(root))
+        (self.root / "AGENTS.md").write_text('# Old rules\nRun python3 "/old/brainlib.py" next --library "%s"\n' % self.root, encoding="utf-8")
+        edited = '# Old rules\nRun brainlib next --library "%s"\nMy own line.\n' % mine
+        (mine / "AGENTS.md").write_text(edited, encoding="utf-8")
+        r = update.adapt("0.1.0", old_program=str(old))
+        self.assertEqual(r["agents_files"], [str(self.root / "AGENTS.md")])
+        self.assertEqual(r["rebuilt"], 2)
+        self.assertEqual((self.root / "AGENTS.md").read_text(encoding="utf-8"), cli.agents_text(self.root, "en"))
+        self.assertEqual((mine / "AGENTS.md").read_text(encoding="utf-8"), edited)
+        self.assertEqual(config.global_state()["update"]["seen_version"], update.__version__)
+
+
 class ConnectTests(Base):
     def setUp(self):
         super().setUp()
@@ -617,6 +759,22 @@ class ConnectTests(Base):
         self.assertEqual(path.read_text(encoding="utf-8"), original)
         with self.assertRaises(BrainError):
             connect.write(lib, "cursor", "brainlib", "zh")
+
+    def test_an_update_refreshes_the_lines_brainlib_wrote_into_tool_files(self):
+        lib = self.lib({})
+        config.register(self.root)
+        path = self.home / ".claude" / "CLAUDE.md"
+        path.parent.mkdir()
+        path.write_text("# Mine\n\n%s\n## My brain library\nOld wording, at %s.\n%s\n" % (connect.START, lib.root, connect.END), encoding="utf-8")
+        other = self.home / ".gemini" / "GEMINI.md"
+        other.parent.mkdir()
+        other.write_text("%s\nA library brainlib does not know: /elsewhere\n%s\n" % (connect.START, connect.END), encoding="utf-8")
+        r = update.adapt("0.1.0")
+        self.assertEqual(r["tool_files"], [str(path)])
+        text = path.read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("# Mine\n\n%s\n## My brain library" % connect.START))
+        self.assertNotIn("Old wording", text)
+        self.assertIn("/elsewhere", other.read_text(encoding="utf-8"))
 
     def test_next_asks_to_connect_after_onboarding(self):
         lib = self.lib({})

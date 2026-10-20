@@ -504,6 +504,17 @@ def _stale(lib, p, why):
     )
 
 
+def retire(lib, pid, why):
+    """Take an open proposal out of review because what it would add is outdated. Its items are
+    left for the caller to re-label."""
+    p = get(lib, pid)
+    if p["status"] in OPEN_STATES:
+        p["status"] = "stale"
+        p["stale_reason"] = why
+        _save(lib, p)
+    return p
+
+
 def _mark_items(lib, p, status):
     from . import inbox
 

@@ -30,10 +30,10 @@ The maintainer finds pages past their check-again date, broken links, passwords 
 ## What it looks like
 
 - On Monday you mention in Cursor that you never use exclamation marks. On Wednesday you ask Claude Code to write an email; it checks the brain library first, and the email has no exclamation marks.
-- You say "I'm going to Chengdu on business next month", and that sentence is what it saves. If it guesses you like spicy food, that's saved as a guess.
-- A few days later it asks "Add 'only drinks tea in the morning' to About me?", and it changes the note only after you say yes.
-- Last month you said "no coffee"; today you say "one cup a day now". It asks "Replace 'no coffee' with 'one cup of coffee a day'?", and from then on every AI goes by the new one.
-- You say "My bank card PIN is 4821, please remember it." It won't, and suggests a password manager instead. <!-- brainlib:allow -->
+- You say "I'm presenting this paper at NeurIPS next month", and that sentence is what it saves. If it guesses the paper is about reinforcement learning, that's saved as a guess.
+- A few days later it asks "Add 'export every figure in a paper as vector PDF' to About me?", and it changes the note only after you say yes.
+- Last month you said "cluster the standard errors by firm"; today you say "cluster by firm and year instead". It asks "Replace 'cluster by firm' with 'cluster by firm and year'?", and from then on every AI goes by the new one.
+- You paste an OpenAI API key and say "remember this for next time". It won't, and suggests a password manager, with only a note of where the key is kept.
 
 ## Installing
 
@@ -41,7 +41,9 @@ After sending that sentence, answer its questions. It asks which language you wa
 
 Once connected, every new conversation reads the brain library first without you asking. For tools like Claude Code and Codex, it adds a few lines to their global instructions; for tools like Cursor and Trae, it gives you a short text to paste into their settings. Everything it adds is marked and can be removed at any time.
 
-After installing, three things are new on your computer: the brainlib program in your home folder (for example `~/brainlib`), the brain library in the folder you chose, and brainlib's own records and the buffer in `~/.brainlib`. Nothing runs in the background; brainlib runs only when an AI calls it. It asks you before installing anything or changing any tool's settings.
+After installing, three things are new on your computer: the brainlib program in your home folder (for example `~/brainlib`), the brain library in the folder you chose, and brainlib's own records and the buffer in `~/.brainlib`. Nothing runs in the background; brainlib runs only when an AI calls it. Apart from updating itself, it asks you before installing anything or changing any tool's settings.
+
+brainlib keeps itself up to date. When the AI runs `brainlib next`, brainlib checks GitHub for a new release at most once a day; if there is one, the AI updates right away and then tells you what changed. An update replaces only the brainlib program and never touches your notes; the lines brainlib added to your tools' instructions are refreshed too, with backups of the old files. If you don't want automatic updates, tell the AI and it will run `brainlib update --off`.
 
 You need Python 3.9 or newer. If you don't have it, the AI asks you first and then helps you install it. age (for the vault) and git are optional.
 
@@ -70,6 +72,7 @@ Your starting level depends on how you answer the setup questions, and you can c
 - The vault is encrypted with [age](https://github.com/FiloSottile/age). Only you can type its passphrase, in a terminal window, so the AI can't open it. The vault is optional and off by default.
 - Change records and check reports never copy your notes. They record only which note changed and who approved it.
 - Before sharing your brain library with anyone, you can scan it against your own private word list (real names, company, address and so on), and it passes only with zero matches.
+- brainlib goes online only to update itself: at most once a day it asks GitHub for the latest version number, and it downloads a new release from GitHub when there is one. The requests carry none of your notes or personal details; GitHub sees only your IP address and the brainlib version. You can turn this off.
 
 **A few things it can't do.**
 
@@ -103,6 +106,115 @@ Your starting level depends on how you answer the setup questions, and you can c
 ## Why I built it
 
 I first built a brain library for myself. Several AIs read it and write to it day to day, and later I turned the parts anyone could use into brainlib. My one requirement was that the whole library could be handed to a brand-new AI at any time, and it could take over after one read. I call this goal cyber-immortality: record my thinking and the way I make decisions completely, so that whatever AI comes next can act the way I would.
+
+## How it works inside
+
+This section is for readers who want to know how it works inside.
+
+### The parts
+
+brainlib is a command-line program that uses only Python's standard library and never runs in the background. When an AI calls it from the command line, it does one thing and exits; over MCP, the AI tool starts it and it exits when the tool closes.
+
+```mermaid
+flowchart LR
+    U["You"] <-->|"conversation"| A["AI assistant<br>Cursor, Claude Code, Codex and others"]
+    A -->|"command line or MCP"| B["brainlib"]
+    B <-->|"reads notes; writes only after your yes"| L["Brain library folder<br>plain Markdown notes"]
+    B <-->|"buffer, suggested changes, index, receipts"| S["~/.brainlib<br>brainlib's own state"]
+    B -.->|"opens only when you type the passphrase in a terminal"| V["Vault vault/<br>encrypted with age"]
+    B -.->|"at most once a day, version number only"| G["GitHub releases"]
+```
+
+The brain library folder holds your notes. brainlib adds only a settings file, `.brainlib/config.json`, and a new library also gets an `AGENTS.md` for AIs to read. Everything else brainlib keeps lives outside the library in `~/.brainlib`, so putting the library in a sync folder doesn't sync the buffer or suggested changes you haven't approved yet:
+
+```text
+~/.brainlib/
+  global.json                 language, AI self-check results, update checks
+  registry.json               the libraries brainlib knows, and which one is the default
+  libraries/<id>/state/       the buffer inbox/, suggested changes proposals/, receipts receipts/, backups made before changing notes backups/, setup answers
+  libraries/<id>/out/         the index index.json, all records records.json, health report reports.json
+  backups/                    backups made before changing tool instructions or updating the program
+```
+
+### From what you said to a note
+
+```mermaid
+flowchart TD
+    N["The AI runs note<br>your words, plus source, time said, category, importance, privacy level"] --> P{"Looks like a password, key or ID number?"}
+    P -->|"yes"| R["Refused (exit code 3)<br>suggests a password manager"]
+    P -->|"no"| I["Into the buffer<br>other AIs can find it right away, but it is not a note yet"]
+    I --> C["Organizing: classify<br>one suggested change per record, plus a line in that day's log, in the order things were said"]
+    C --> Q{"Needs your yes?"}
+    Q -->|"log entries you allowed to go in directly"| W["Written"]
+    Q -->|"everything else"| ASK["Shown to you; you say yes"] --> W
+    W --> X["Checked and backed up before writing; a receipt afterwards; index rebuilt"]
+    X -.->|"a wrong change"| UN["undo restores the backup"]
+```
+
+- There are six kinds of source: your exact words, a view you clearly stated, something taken from your own writing (with the file name), the AI's inference, the AI's guess, and outside material (with its source). Only the first three count as what you meant.
+- Every record carries the time it was said, to the minute, and the newest statement about the same thing counts. When the AI records a new statement with `--replaces "<a few words of the old one>"`, organizing produces a replace-this-line suggestion and keeps the old wording in brackets at the end of the new line. If the old statement is still in the buffer, only the new one goes into the note and the old one stays in the log. An older line that merely looks alike, without `--replaces`, is only pointed out in the suggestion, never replaced automatically.
+- Writes are checked first. Replacing a whole note requires that the note hasn't changed since the suggestion was made; replacing a line requires that the line is still there. If not, nothing is written and the suggestion is marked out of date (exit code 5). A change that needs your yes is not written without your words (exit code 4).
+- Receipts record which note changed, its hashes before and after, and who approved, never the content.
+- Only one brainlib command runs at a time; the others wait. A lock left behind by a crashed process is recognized and cleared by the next command.
+
+### How the AI finds what it needs
+
+```mermaid
+flowchart LR
+    T["New conversation or task"] --> NX["next<br>what to do now, plus the daily rules"]
+    NX --> IX["index<br>a guide of fixed length"]
+    IX --> F["find with keywords"]
+    F --> RD["read one note"]
+```
+
+- Pages come in four tiers: L0 core pages such as About me, read every time; L1 entry pages; L2 regular notes; L3 the archive. Records use the same tiers: important records not yet filed are L0, other unfiled ones L1, records filed into notes L2, archived ones and older log entries L3.
+- `index` has a fixed length: core pages, important records not yet filed (at most 10), entry pages, the last 7 days of log, recent records (at most 20, newest said first), and statements that may be out of date (at most 5). Older ones are found with filters such as `index --since`, `--category` or `--importance`.
+- Private notes never show up in search, read, the index or MCP, not even their titles. Keys found inside ordinary notes are masked when read.
+
+### next gives one thing at a time
+
+Before every task the AI runs `brainlib next`. It goes through the checks below in order, names only the first thing that needs doing, and adds the daily rules.
+
+```mermaid
+flowchart TD
+    S["brainlib next"] --> UP{"New release out?"}
+    UP -->|"yes"| U["update first"]
+    UP -->|"no"| AC{"Has the AI done the 4-task self-check?"}
+    AC -->|"no"| ACK["agent-check"]
+    AC -->|"yes"| LG{"Language chosen?"}
+    LG -->|"no"| L["lang zh or en"]
+    LG -->|"yes"| LB{"Is there a library?"}
+    LB -->|"no"| IN["doctor, then init or adopt"]
+    LB -->|"yes"| SET{"Setup done?<br>permissions, ten questions, tools connected"}
+    SET -->|"no"| ONE["the next setup step"]
+    SET -->|"yes"| DAY["Daily: keys in notes, the vault, changes allowed to go in directly,<br>suggestions due for review, the buffer to organize, answers due for a check, health check"]
+```
+
+The output always has the same shape: `NEXT` is what to do, `WHY` is the reason, `RUN` lines are commands to run, `SAY TO USER` is what to tell you, and `THEN` says to run `next` again afterwards. Small models can follow it line by line.
+
+### Updates
+
+```mermaid
+flowchart TD
+    A["next, at most one check a day"] --> B{"Latest release on GitHub newer than this one?"}
+    B -->|"no"| Z["carry on"]
+    B -->|"yes"| C["The AI runs update without asking first"]
+    C --> D{"How was brainlib installed?"}
+    D -->|"git clone"| E["Fetch the release tag from the official repository, fast-forward only<br>stops if the program folder has local changes"]
+    D -->|"unpacked folder"| F["Download the release zip, check its version and paths<br>back up the old program, then copy over it"]
+    D -->|"pip"| G["Print the pip command"]
+    E --> H["The new version takes over: rebuilds the index,<br>refreshes brainlib's lines in tool instructions,<br>replaces a library AGENTS.md nobody edited"]
+    F --> H
+    H --> I["The AI tells you what changed"]
+```
+
+To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs.
+
+### Exit codes
+
+Every error prints two lines: `ERROR` says what happened and `FIX` says what to do. Exit codes are fixed: 0 success; 1 findings, for example the health check found problems; 2 wrong usage; 3 stopped by the privacy check; 4 needs your yes; 5 conflict, for example the note changed in the meantime.
+
+Details of the note format and source labels are in `spec/`; security considerations are in [docs/threat-model.md](docs/threat-model.md).
 
 ## Files
 

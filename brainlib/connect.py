@@ -106,7 +106,7 @@ def _without_block(text):
     return joined + ("\n" if joined and not joined.endswith("\n") else ""), True
 
 
-def _read(path):
+def read_text(path):
     return path.read_text(encoding="utf-8") if path.is_file() else ""
 
 
@@ -130,7 +130,7 @@ def status():
                 "name": t["name"],
                 "detected": bool(seen and seen.exists()),
                 "file": str(path) if path else None,
-                "connected": bool(path and START in _read(path)),
+                "connected": bool(path and START in read_text(path)),
                 "where": t.get("where"),
             }
         )
@@ -147,7 +147,7 @@ def write(lib, key, cmd, lang):
             code=EXIT_USAGE,
         )
     path = t["file"]()
-    old = _read(path)
+    old = read_text(path)
     rest, _had = _without_block(old)
     new = (rest.rstrip("\n") + "\n\n" if rest.strip() else "") + block(lib, cmd, lang) + "\n"
     if new == old:
@@ -166,7 +166,7 @@ def remove(key):
             code=EXIT_USAGE,
         )
     path = t["file"]()
-    old = _read(path)
+    old = read_text(path)
     new, had = _without_block(old)
     if not had:
         return {"tool": key, "file": str(path), "changed": False, "backup": None}

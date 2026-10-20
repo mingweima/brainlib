@@ -5,8 +5,8 @@
     "zh": "开始之前，我想问你最多 10 个简单的选择题，好按你想要的方式用你的库。任何一题都可以跳过；以后想改，直接告诉我就行。"
   },
   "outro": {
-    "en": "Thank you. None of this is fixed: tell me any time if you want to change an answer. I'll check the permission and privacy answers with you again in about 3 months, how often to review in about 2 months, how to ask you in about 4 months, and the rest in about 6 months.",
-    "zh": "谢谢。这些都不是定死的，随时告诉我想改哪一条。权限和隐私相关的几题，我大约 3 个月后再跟你确认一次；多久看一次整理建议，大约 2 个月后确认；怎么问你拿主意，大约 4 个月后确认；其余的大约半年确认一次。"
+    "en": "Thank you. None of this is fixed: tell me any time if you want to change an answer. I'll check the permission and privacy answers with you again in about 3 months, how often to review in about 2 months, how to ask you in about 4 months, and the rest in about 6 months. brainlib also updates itself when a new version comes out, and I'll tell you what changed; if you'd rather it didn't, just say so.",
+    "zh": "谢谢。这些都不是定死的，随时告诉我想改哪一条。权限和隐私相关的几题，我大约 3 个月后再跟你确认一次；多久看一次整理建议，大约 2 个月后确认；怎么问你拿主意，大约 4 个月后确认；其余的大约半年确认一次。另外，brainlib 出了新版本会自己更新，更新完我会告诉你改了什么；不想让它自动更新，跟我说一声就行。"
   },
   "questions": [
     {
