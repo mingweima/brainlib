@@ -4,131 +4,99 @@
 
 [中文](README.md)
 
-You probably use several AIs at once. One writes, one looks things up, one codes. They are all very capable, yet none of them really knows you.
+brainlib is a small harness I hacked together. Every time I switched models or started a new project with an AI, I had to explain all the context again from scratch, and agents that ran for a long time lost their long-term memory and started hallucinating.
 
-Every time you switch tools or open a new chat, you have to explain all the context again from scratch. Even when an AI remembers a little, that memory lives on the provider's servers, and you can't take it with you when you switch.
-Over time the context grows too big for the AI to handle, and its memory gets muddled or it starts making things up.
+brainlib maintains a "brain library" folder on your own computer. Any local AI agent can work with it, and after each conversation it writes down what it learned, so switching models doesn't lose what your agents knew about you (it's agent-agnostic). It has three modules. The capturer puts your preferences, decisions and the like into a buffer first, each labeled with where it came from. The organizer turns the buffer into suggested changes to the brain library. The maintainer gives the library regular health checks and archives what's outdated.
 
-What brainlib does is simple. It keeps what your AIs learn about you, as they learn it, in a folder on your own computer. We call it your brain library. Whichever AI you use, it reads the brain library first,
-the way a new colleague reads the handover notes on day one. Once it has read them, it knows who you are and how to work with you.
+To install, tell the agent in Cursor, Claude Code, Codex or a similar tool: "Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me." After that, whenever you start a new agent conversation, have it read what's in the brainlib folder first.
 
-After each conversation, the AI writes what it learned into the brain library, and nothing goes into your notes until you say yes. The longer you use it, the better it knows you. Switch models or switch tools, and everything in the brain library is still yours.
+Only tested on a Mac so far. AIs in a web page or a phone app can't use it yet.
 
-We call this goal cyber-immortality. Record your thinking and the way you make decisions completely, so that whatever AI comes next can act the way you would.
+## How it works once installed
 
-**Get started with one sentence.** Tell your AI assistant "Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me."
-It will ask you a few multiple-choice questions. Answer each with a single letter, and it does the rest.
-This needs an AI assistant that can run commands on your computer, such as Cursor, Claude Code, Codex or Trae. AIs on the web or on your phone can't do it yet.
+At the start of each new conversation, the AI reads a few core pages of the brain library, such as "About me", the way a new colleague reads the handover notes on day one. Other notes are looked up when needed, so the whole library never gets stuffed into the conversation.
 
-## Why I built brainlib
+When you say something worth remembering, the capturer puts your exact words into the buffer (the AI may call it the inbox when it talks to you), labeled "you said" with the date. The AI's own guesses are labeled as guesses, and things found online carry their source; only what you said counts as what you meant. Other AIs can find what's in the buffer right away, but it isn't part of your notes yet.
 
-I'm Mingwei, the developer of brainlib. I use several AI assistants at once, spread across different tools. Some help me look things up and do research, some write code, some organize my notes.
-I want every exchange with them to go both ways. I get information and knowledge from the AI, and the AI learns my way of thinking and my experience from me. The longer that builds up, the better they can make judgments the way I would.
+Every so often the organizer turns the buffer into suggested changes and shows them to you. Nothing goes into your notes until you say yes, and a wrong change can be undone. How often this happens, and whether things like a journal can be recorded directly, are up to you during setup.
 
-So I first built a brain library for myself. Every AI reads it before it starts and writes to it when it's done, keeping what I said apart from what it guessed, and asking me before it changes anything.
-I also wanted to be able to hand the whole library to a brand-new AI at any time and have it take over after one read. I've been working this way myself, and brainlib is the part of it that works for anyone, packaged so you can start with one sentence.
+The maintainer finds pages past their check-again date, broken links and passwords that ended up in notes, and asks whether to update or archive them. Every few months it goes over the setup questions with you again, and if what you've been saying lately doesn't match an earlier answer, it asks about that too. All of this comes up the next time you talk to an AI; it never pops up on its own.
 
-## What it looks like in use
+## What it looks like
 
-**Switch AIs without starting over.** On Monday you mention in Cursor that you don't like exclamation marks in your writing. On Wednesday you ask Claude Code to write an email. It reads the brain library first, and the email has no exclamation marks.
+- On Monday you mention in Cursor that you never use exclamation marks. On Wednesday you ask Claude Code to write an email; it checks the brain library first, and the email has no exclamation marks.
+- You say "I'm going to Chengdu on business next month", and that sentence is what it saves. If it guesses you like spicy food, that's saved as a guess.
+- A few days later it asks "Add 'only drinks tea in the morning' to About me?", and it changes the note only after you say yes.
+- You say "My bank card PIN is 4821, please remember it." It won't, and suggests a password manager instead. <!-- brainlib:allow -->
 
-**It keeps your exact words.** You say "I'm going to Chengdu on a business trip next month", and it records that sentence as it is, marked as yours and dated.
-Even if it records a guess of its own, such as "probably likes spicy food", that is marked as the assistant's guess and never taken as what you think.
+## Installing
 
-**It asks before changing your notes.** It never edits your notes on its own. Every so often it shows you its suggested tidy-ups, for example "Add 'only drinks tea in the morning' to About me?"
-It changes the note only after you say yes, and if something went wrong, just say so and it's undone.
+After sending that sentence, answer its questions. It asks which language you want and where to keep the brain library, then ten multiple-choice questions, for example what it may record, whether to ask before every change, and which topics are sensitive. Finally it asks which AI tools you use and connects them.
 
-**When you change your mind, it follows.** You once said "remind me to tidy up every day", then said "not now" a few times. It comes back and asks whether once a week would suit you better.
-After a few months, it also checks those first multiple-choice answers with you again.
+Once connected, every new conversation reads the brain library first without you asking. For tools like Claude Code and Codex, it adds a few lines to their global instructions; for tools like Cursor and Trae, it gives you a short text to paste into their settings. Everything it adds is marked and can be removed at any time.
 
-**New model? Just switch.** The brain library is on your own computer, not with any company. A new model reads it once and knows on day one who you are and how you work.
+After installing, three things are new on your computer: the brainlib program in your home folder (for example `~/brainlib`), the brain library in the folder you chose, and brainlib's own records and the buffer in `~/.brainlib`. Nothing runs in the background; brainlib runs only when an AI calls it. It asks you before installing anything or changing any tool's settings.
 
-**It stays away from private things.** Say "My bank card PIN is 1234, please remember it", and it refuses and suggests a password manager. brainlib never hands notes in the private folder to the AI, and anything that really matters can go in a vault only you can open. <!-- brainlib:allow -->
+You need Python 3.9 or newer. If you don't have it, the AI asks you first and then helps you install it. age (for the vault) and git are optional.
 
-**Several AIs, one brain library.** One looks things up, one writes code, one organizes your notes. Whatever any of them learns goes into the same library, so you don't have to pass it along.
+Before starting, the AI takes a 4-question self-check that the program grades. If it fails, it tells you so and suggests a stronger model, or read-only lookups for now.
 
-## How it differs from typical AI memory
+Windows and Linux should work too, but haven't been tested yet. If you run into problems, please open an issue on GitHub, in English or Chinese.
 
-| What you care about | Typical AI memory | brainlib |
-|---|---|---|
-| If I switch AIs, will it still know me? | Usually not. Each provider keeps its own memory, and switching often means starting over | **One brain library, shared by every AI you connect.** It lives on your own computer, and each connected AI reads it before it starts |
-| Does it record what I said, or what it guessed? | Usually it can't tell | **Every entry says where it came from.** Your exact words, your views, the AI's guesses and material from the web are each marked, so you can tell them apart at a glance. Only what you said counts as what you mean |
-| Will it change things on its own? | Mostly the AI decides by itself what to remember and change | **It asks before changing anything.** Changes happen only after you agree. The most important pages (such as About me) need your explicit yes every time, and mistakes can be undone |
-| What about privacy? | Mostly down to settings and the AI's good behavior | **Privacy has hard rules.** brainlib never hands private notes to the AI. The most sensitive ones can go in a vault that only opens with your passphrase. Passwords, ID numbers and the like are refused outright. What it can't do is spelled out under Privacy below |
-| I'm not technical. Can I install it? | Often means installing and configuring a pile of software | **Installed with one sentence.** Send one sentence to an AI assistant that can run commands, and it reads the instructions and installs brainlib itself. Your computer needs Python; if it's missing, the AI asks you first and then helps you install it |
-| My AI isn't very smart. Will it work? | Usually no warning | **It tests itself before working.** Before starting, it takes a 4-question quiz graded by the program. If it fails, it tells you first, so you don't waste your time |
-| Will my existing notes get messed up? | Often you have to import them into its own format first | **Your notes stay as they are.** Connecting changes not a single character, and by default later changes need your OK. If you stop using it one day, your notes are exactly as they were |
-| What if I change my mind? | Rarely checks back with you | **It changes with you.** Every few months it checks again, and when what you do no longer matches what you said before, it asks again |
-| Is it too complicated? | Either too simple, or complex from day one | **It starts simple.** By default it only suggests and never edits. Once you're comfortable, unlock more one level at a time, such as recording journal entries directly or adding a vault |
-| Does it speak my language? | Similar open-source tools are mostly English-only | **Chinese first, English too.** It asks your language before anything else, then sticks to it |
+## Five levels
 
-Other projects have done some of these on their own. brainlib puts them together, has source labels and ask-before-editing switched on from day one, and installs with one sentence.
+Each level includes everything in the one before it, and switching levels never changes your notes. At every level, the AIs you connect share the same library.
 
-## Getting started (no Python knowledge needed)
+- **0 Read-only.** Helps the AI understand your notes. It can search and check your notes for problems, and writes nothing. Good for trying it out.
+- **1 Capture.** Adds the buffer, so what the AI learns is kept outside your notes and you do the tidying.
+- **2 Organize.** Adds suggested changes that apply only after you approve them, each one recorded and undoable. If you allow it, low-risk entries such as a journal can be recorded directly. This is the default, and enough for most people.
+- **3 Vault.** Adds an encrypted vault for private content that only you can open.
+- **4 Multi-assistant.** Adds MCP and checks you write yourself, for power users with several AIs splitting up the work.
 
-1. Open an AI assistant that can run commands on your computer, such as Cursor, Claude Code, Codex or Trae.
-2. Say this to it.
-
-   > Please read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me.
-
-3. Just answer its questions. It first asks which language you prefer, then where to keep the brain library, then 10 multiple-choice questions about you, and finally which AI tools you use, so it can connect them all to the brain library.
-   It asks you before it installs anything or changes any tool's settings.
-4. After that, just talk normally, for example "Remember that I only drink tea in the morning", "Tidy up this week's notes" or "What was that book I said I wanted to read?"
-
-Before it starts, the assistant takes a 4-question self-test. A small model, or one that fails the test, will tell you up front that it may not do well.
-
-## Common questions
-
-**Does it cost anything?** It's free for personal use. Your AI tools charge their own prices, and brainlib adds nothing.
-
-**I only use ChatGPT, Doubao or Kimi on the web or on my phone. Will it work?** Not yet. brainlib runs commands on your computer, which web and phone AIs can't do.
-Assistants that can run commands, such as Cursor, Claude Code, Codex and Trae, all work, and the Claude desktop app can connect over MCP (see [docs/mcp.md](docs/mcp.md)).
-
-**Will my notes be uploaded?** brainlib itself uploads nothing, and the brain library is just a folder on your computer. But whatever the AI reads goes to the company behind its model, as with any AI use.
-Put anything you don't want the AI to see in the library's `private` folder, and brainlib won't hand it to the AI. For what really matters, the vault is safest.
-
-**Can I try it without letting it write anything?** Pick "read-only" for question 4. It then only reads your notes and writes nothing. You can change this at any time.
-
-**Can I bring over what ChatGPT already remembers about me?** Not automatically yet. You can copy that text to the AI and have it put it in the inbox, then confirm what's right when you tidy up.
-
-**What if I stop using it?** Your notes are still plain Markdown files that open anywhere and go wherever you go. To make the AI stop using it, ask the AI to remove the lines it added to each tool
-(`brainlib connect --tool <tool> --remove`).
-
-## Five levels, from simple to advanced
-
-Each level includes everything in the level before it, and switching levels never requires changing your notes.
-
-| Level | What it can do | Good for |
-|---|---|---|
-| 0 Read-only | Helps the AI understand your notes. It can search and run health checks, and writes nothing | Trying it out |
-| 1 Capture | Adds an inbox, so what the AI learns is kept outside your notes first | Doing your own tidying |
-| 2 Organize | Adds suggested edits that apply only after you approve them, with a receipt each time and undo. Low-risk entries such as journals can be recorded automatically | Most people (default) |
-| 3 Vault | Adds an encrypted vault for private content that only you can open | People with private content |
-| 4 Multi-assistant | Adds MCP and your own checks, for several AIs splitting up the work | Power users |
-
-Your starting level depends on how you answer the questions and which features you turn on, and you can change it at any time.
+Your starting level depends on how you answer the setup questions, and you can change it at any time.
 
 ## Privacy
 
 **What brainlib guarantees.**
 
 - Search, read, the index and the MCP interface never return private notes, not even their titles.
-- Anything in a note or an edit that looks like a password, secret key, ID number or bank card number is refused.
-- The vault is encrypted with [age](https://github.com/FiloSottile/age), and its key is locked with your passphrase. Only you can type the passphrase, in your own terminal, so the AI can't open it.
-- Edit receipts and health reports never copy your notes. They record only which note changed, who approved it, and counts.
-- Before you publish or share anything, you can scan it against your own private word list (real names, company, address and so on), and it passes only with zero matches.
+- Passwords, secret keys, ID numbers and bank card numbers are refused in notes and edits. Ones already in your notes are hidden when shown to the AI.
+- The vault is encrypted with [age](https://github.com/FiloSottile/age). Only you can type its passphrase, in a terminal window, so the AI can't open it. The vault is optional and off by default.
+- Change records and check reports never copy your notes. They record only which note changed and who approved it.
+- Before sharing your brain library with anyone, you can scan it against your own private word list (real names, company, address and so on), and it passes only with zero matches.
 
-**What it can't do, so you know.**
+**A few things it can't do.**
 
-- An AI's own file-reading tools may still be able to read private files that aren't encrypted. brainlib tells it not to and ships permission templates for common tools, but the most reliable protection is the vault.
+- An AI's own file-reading tools may still be able to read private files that aren't encrypted. brainlib tells it not to and ships permission settings for common tools, but the safest place for private content is the vault.
 - File names inside the vault are visible.
 - Your sync provider can see notes that aren't encrypted.
+- What the AI reads is sent to the company behind its model, just as when you use that AI anywhere else.
 
-## Requirements
+## FAQ
 
-- macOS, Windows or Linux. v0.1 has only been tested on macOS so far. If something goes wrong on Windows or Linux, please tell us on GitHub.
-- Python 3.9 or newer. If you don't have it, your AI assistant will help you install it. Nothing else to install. No pip, no virtual environment, no dependencies.
-- age (for the vault) and git are optional.
+**How is this different from ChatGPT's built-in memory?** What ChatGPT remembers only helps inside ChatGPT; switch to Cursor and it's gone. The brain library is plain files on your computer, every AI you connect reads the same copy, and each entry says whether you said it or the AI guessed it.
+
+**Does it cost anything?** brainlib is free; the AI tools you use charge their own prices. The license doesn't allow commercial use, and personal study and hobby projects are free. Whether using it for your company's work counts as commercial use is governed by the LICENSE text; if you're unsure, ask me on GitHub.
+
+**I only use ChatGPT, Doubao or Kimi in a browser or on my phone. Can I use it?** Not yet, because brainlib needs to run commands on your computer. Claude Desktop can connect through MCP (a standard way for AI tools to call outside programs); see [docs/mcp.md](docs/mcp.md).
+
+**Reading the brain library at the start of every conversation, won't that be slow or use up my quota?** It reads only a few core pages each time and looks up the rest when needed. However big the library gets, each conversation reads those few pages plus whatever it finds.
+
+**Can I use it without existing notes?** Yes, it creates a new library for you. If you already have a folder of Markdown notes (Obsidian, for example), it can use that folder directly without changing a single character. Notes in Notion, Evernote or Apple Notes can't be imported directly yet; if you can export them as Markdown files, it can use the exported files.
+
+**Can I open, edit or delete things myself?** Yes. The notes are ordinary Markdown files that any editor can open. To see what's in the buffer and not yet tidied, ask the AI to list it.
+
+**Can two computers share one library?** Put the brain library in a sync folder such as iCloud or OneDrive, and both computers can read the notes. The buffer and suggested changes you haven't approved yet stay on each computer and don't sync.
+
+**Can I try it without letting it write anything?** One setup question asks whether it may write; choose "read-only". You can change that at any time.
+
+**Can I move over what ChatGPT already remembers about me?** Not automatically yet. You can paste it to the AI and have it saved to the buffer first, then approve it when tidying.
+
+**What if I want to stop using it?** Your notes are still ordinary Markdown files, so you can open them and take them anywhere. To stop the AI from using it, ask the AI to remove the lines it added to each tool (`brainlib connect --tool <tool> --remove`).
+
+## Why I built it
+
+I first built a brain library for myself. Several AIs read it and write to it day to day, and later I turned the parts anyone could use into brainlib. My one requirement was that the whole library could be handed to a brand-new AI at any time, and it could take over after one read. I call this goal cyber-immortality: record my thinking and the way I make decisions completely, so that whatever AI comes next can act the way I would.
 
 ## Files
 
@@ -146,7 +114,6 @@ tests/             Tests
 
 ## License
 
-brainlib is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). Individuals can use, modify and share it free of charge for personal use, research, study and hobby projects, and so can charities, schools, public research organizations and government institutions.
-**Commercial use is not allowed**, and the licensor keeps all commercial rights. For a commercial license, contact the developer through GitHub (github.com/mingweima/brainlib). This is a summary, and the LICENSE text governs.
+brainlib is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). Individuals can use, modify and share it free of charge for personal use, research, study and hobby projects, and so can charities, schools, public research organizations and government institutions. **Commercial use is not allowed**, and the licensor keeps all commercial rights. For a commercial license, contact the developer through GitHub (github.com/mingweima/brainlib). This is a summary, and the LICENSE text governs.
 
 Developer Mingwei Ma, Capibara Capital.
