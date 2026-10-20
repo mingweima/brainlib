@@ -17,8 +17,9 @@ an older brainlib wrote and nobody edited since. If the program changed some oth
 version and only rewrites files that run it, or run a copy that is gone, so two copies sharing
 ~/.brainlib leave each other alone; when one is deleted, the next copy to run takes over the files
 that named it. A copy on a drive that is not mounted, or in a folder that can't be read, is not taken
-for deleted. After going back to an older version, brainlib does not update itself to the version the
-user left.
+for deleted; nor is one deleted together with the folder around it, which looks the same as a drive
+that is not mounted. After going back to an older version, brainlib does not update itself to the
+version the user left.
 
 `brainlib update --off` stops the checks; so does the environment variable BRAINLIB_NO_UPDATE_CHECK=1.
 Adapting after a manual update still happens; it never goes online.
