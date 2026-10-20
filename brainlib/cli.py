@@ -1165,7 +1165,10 @@ def cmd_privacy(args):
         files = _walk_files(root, lib)
     else:
         root = Path(args.path or os.getcwd()).resolve()
-        if (root / ".git").exists():
+        if root.is_file():
+            files = [root.name]
+            root = root.parent
+        elif (root / ".git").exists():
             files = privacy.git_files(root, staged=args.staged)
         else:
             files = _walk_files(root)

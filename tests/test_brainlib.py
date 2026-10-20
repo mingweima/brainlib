@@ -1184,6 +1184,10 @@ class CliTests(Base):
         code, out = self.cli("privacy", "scan", "--mode", "library", str(self.root / "a.md"), *lib)
         self.assertEqual(code, 0, out)
         self.assertIn("1 file(s)", out)
+        self.write("b.md", "token " + FAKE_TOKEN + "\n")
+        code, out = self.cli("privacy", "scan", "--mode", "commit", "--path", str(self.root / "b.md"))
+        self.assertEqual(code, 3, out)
+        self.assertIn("in 1 file(s)", out)
         with self.assertRaises(SystemExit) as cm, contextlib.redirect_stderr(io.StringIO()):
             cli.main(["privacy", "scan", "--bogus"])
         self.assertEqual(cm.exception.code, 2)

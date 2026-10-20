@@ -3,7 +3,7 @@
   "owner": "human:avery",
   "library_name": "avery-demo",
   "zones": [
-    {"path": "core/", "tier": "L0", "note": "values and how to work with me"},
+    {"path": "core/", "tier": "L0", "note": "research ethics and assistant workflow rules"},
     {"path": "journal/", "stream": true, "auto_apply": true},
     {"path": "private/", "sensitivity": "private"},
     {"path": "_archive/", "authority": "archived", "tier": "L3"}

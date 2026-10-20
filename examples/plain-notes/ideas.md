@@ -1,9 +1,9 @@
-# Random Ideas & To-Dos
+# Research Ideas & Backburner Notes
 
-- Build a narrow cedar planter box for the balcony railing before spring.
-- Repot the fern in the hallway (roots are coming out the bottom).
-- Frame the postcard from the lighthouse trip.
-- Ask Sam for that sourdough starter discard cracker recipe.
-- Pick a new fiction book from [[book-list]] before the long train ride next month.
-- Look up local pottery weekend workshops for November.
-- Reorganize the kitchen spice drawer alphabetically.
+- Test whether commercial office lease expirations predict firm-level transitions to permanent hybrid schedules.
+- Compare wage pass-through of remote work between multi-establishment firms and single-site employers.
+- Build a synthetic county panel for ECON 712 lab exercises so students can practice staggered DiD without restricted data.
+- Ask Theo Vance to check if occupational licensing boundaries create sharp discontinuities in cross-state remote hiring.
+- Pick a new spatial labor paper from [[reading-list]] for the November reading group meeting.
+- Check whether the New Verdan UI data includes quarterly hours worked starting in 2023Q1.
+- Write a short shell script to validate LaTeX table macros against the R output logs.

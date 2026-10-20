@@ -13,4 +13,4 @@ sensitivity: internal
 
 # Unsorted Inbox
 
-Ask the town hardware store if they carry replacement gaskets for the 5-gallon fermentation tubs [said 2026-10-19].
+Ask the New Verdan enclave administrator whether the 2025Q1 quarterly occupational codes use the revised crosswalk [said 2026-10-19].
