@@ -1,8 +1,8 @@
 # brainlib
 
-> brainlib is an agent-agnostic "brain library" for AI agents: a small Python harness (Python 3.9+, zero dependencies) that maintains a plain Markdown folder on the user's own computer that any local AI agent (Cursor, Claude Code, Codex, Gemini CLI, Windsurf, Trae and similar) can safely read, record into and organize. Context and long-term memory survive switches between models, tools and projects. Licensed under PolyForm Noncommercial 1.0.0.
+> brainlib is an agent-agnostic "brain library" for AI agents: a small Python harness (Python 3.9+, zero dependencies) that maintains a plain Markdown folder on the user's own computer that any local AI agent (Cursor, Claude Code, Codex, Gemini CLI, Windsurf, Trae and similar) can safely read, record into and organize. Context and long-term memory survive switches between models, tools and projects. Open source under the Apache License 2.0.
 
-How it works: three modules. The capturer writes what the agent learns (preferences, decisions, facts) into a buffer, each record tagged with its source (user said / user judgment / extracted / inferred / guess / external) and the time it was said. The organizer turns the buffer into proposed edits that take effect only after the user approves them, with receipts, backups and undo. The maintainer runs health checks (stale pages, broken links, leaked secrets, contradictions) and archiving. The newest statement wins when old and new disagree.
+How it works: three modules. The capturer writes what the agent learns (preferences, decisions, facts) into a buffer, each record tagged with its source (user said / user judgment / extracted / inferred / guess / external) and the time it was said. The organizer turns the buffer into proposed edits, with receipts, backups and undo. Edits to core and entry pages always need the user's approval; whether others, such as log entries, go in directly is the user's choice at setup. The maintainer runs health checks (stale pages, broken links, leaked secrets, contradictions) and archiving. The newest statement wins when old and new disagree.
 
 Install: ask a local agent that can run terminal commands to "read AGENTS.md at https://github.com/mingweima/brainlib and set up brainlib for me". The agent then runs `python3 brainlib.py next` repeatedly and follows its NEXT / WHY / RUN / SAY TO USER / THEN output. It only works with agents that can operate the computer, not browser or phone chat apps.
 
@@ -30,4 +30,5 @@ Install: ask a local agent that can run terminal commands to "read AGENTS.md at 
 ## Optional
 
 - [Releases](https://github.com/mingweima/brainlib/releases): versioned releases; `brainlib next` checks for a new one at most once a day
-- [LICENSE](https://github.com/mingweima/brainlib/blob/main/LICENSE): PolyForm Noncommercial License 1.0.0
+- [LICENSE](https://github.com/mingweima/brainlib/blob/main/LICENSE): Apache License 2.0
+- [NOTICE](https://github.com/mingweima/brainlib/blob/main/NOTICE): names the developer; keep it when you distribute brainlib

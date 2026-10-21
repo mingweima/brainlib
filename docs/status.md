@@ -1,4 +1,4 @@
-# v0.2.2 现状 / Status
+# v0.2.3 现状 / Status
 
 ## 能用的 / Works
 
@@ -34,6 +34,17 @@
 - 技能说明目前以中文为主，英文版只有 `AGENTS.en.md` 和 `README.en.md`。
 
 ## 更新记录 / Changes
+
+### v0.2.3（2026-10-21）
+
+- 改成开源，从这一版起用 Apache License 2.0，新加的 NOTICE 文件写着开发者。v0.2.2 及更早的版本仍按发布时的 PolyForm Noncommercial 1.0.0。
+  brainlib is now open source under the Apache License 2.0, and a new NOTICE file names the developer. Version 0.2.2 and earlier stay under the PolyForm Noncommercial License 1.0.0 they were released with.
+- README「机制和运行逻辑」一节原来有五张流程图，现在只留一张，写入和读取画在一起，其余改成列表，内容没少，行数少了四成。
+  The README's "How it works inside" section had five flowcharts and now has one, with writing and reading drawn together. The rest is lists, with nothing dropped and about 40% fewer lines.
+- 新加 llms.txt，是给大模型和 agent 看的项目简介。
+  A new llms.txt gives LLMs and agents a short summary of the project.
+- 旧库不用迁移。
+  Existing libraries need no migration.
 
 ### v0.2.2（2026-10-20）
 

@@ -89,7 +89,7 @@ Your starting level depends on how you answer the setup questions, and you can c
 
 **How is this different from ChatGPT's built-in memory?** What ChatGPT remembers only helps inside ChatGPT; switch to Cursor and it's gone. The brain library is plain files on your computer, every AI you connect reads the same copy, and each entry says whether you said it or the AI guessed it.
 
-**Does it cost anything? Can I use it at work?** `brainlib` is free; the AI tools you use charge their own prices. Using it yourself is free, and that includes your own work, such as managing your own notes on a work computer. Deploying it for other people, building it into a product or using it to provide a service needs a license from me first.
+**Does it cost anything? Can I use it at work?** `brainlib` is free; the AI tools you use charge their own prices. It is open source under the Apache License 2.0, so individuals and companies can use it free of charge, and deploying it for other people, building it into a product or using it to provide a service needs no license from me.
 
 **I only use ChatGPT, Doubao or Kimi in a browser or on my phone. Can I use it?** No, and that is by design: `brainlib` has to read and write files and run commands on your computer, which an AI in a browser or a phone app can't do. Claude Desktop can connect through MCP (a standard way for AI tools to call outside programs); see [docs/mcp.md](docs/mcp.md).
 
@@ -117,21 +117,18 @@ I first built a brain library for myself. Several AIs read it and write to it da
 
 This section is for readers who want to know how it works inside.
 
-### The parts
-
-`brainlib` is a command-line program that uses only Python's standard library and never runs in the background. When an AI calls it from the command line, it does one thing and exits; over MCP, the AI tool starts it and it exits when the tool closes.
+`brainlib` is a command-line program that uses only Python's standard library and never runs in the background. When an AI calls it from the command line, it does one thing and exits; over MCP, the AI tool starts it and it exits when the tool closes. Each arrow below is one `brainlib` command the AI runs.
 
 ```mermaid
 flowchart LR
-    U["You"] <-->|"conversation"| A["AI assistant<br>Cursor, Claude Code, Codex and others"]
-    A -->|"command line or MCP"| B["brainlib"]
-    B <-->|"reads notes; writes only after your yes"| L["Brain library folder<br>plain Markdown notes"]
-    B <-->|"buffer, suggested changes, index, receipts"| S["~/.brainlib<br>brainlib's own state"]
-    B -.->|"opens only when you type the passphrase in a terminal"| V["Vault vault/<br>encrypted with age"]
-    B -.->|"at most once a day, version number only"| G["GitHub releases"]
+    A["AI assistant"] -->|"note<br>your words, source, time said"| I["Buffer"]
+    I -->|"classify"| P["Suggested changes"]
+    P -->|"apply<br>after your yes; log entries you allowed go in directly"| L["Library notes"]
+    L -->|"next, index, find, read"| A
+    I -.->|"findable before it is organized"| A
 ```
 
-The brain library folder holds your notes. `brainlib` adds only a settings file, `.brainlib/config.json`, and a new library also gets an `AGENTS.md` for AIs to read. Everything else `brainlib` keeps lives outside the library in `~/.brainlib`, so putting the library in a sync folder doesn't sync the buffer or suggested changes you haven't approved yet:
+The brain library folder holds your notes. `brainlib` adds only a settings file, `.brainlib/config.json`, and a new library also gets an `AGENTS.md` for AIs to read. The buffer, suggested changes, index, receipts and backups live outside the library in `~/.brainlib`, so putting the library in a sync folder doesn't sync anything you haven't approved yet. The vault, `vault/`, is encrypted with age and opens only when you type the passphrase in a terminal. `brainlib` checks GitHub for the version number at most once a day and sends nothing else. Here is what `~/.brainlib` holds.
 
 ```text
 ~/.brainlib/
@@ -142,36 +139,19 @@ The brain library folder holds your notes. `brainlib` adds only a settings file,
   backups/                    backups made before changing tool instructions or a library AGENTS.md, or updating the program
 ```
 
-### From what you said to a note
+### Writing
 
-```mermaid
-flowchart TD
-    N["The AI runs note<br>your words, plus source, time said, category, importance, privacy level"] --> P{"Looks like a password, key or ID number?"}
-    P -->|"yes"| R["Refused (exit code 3)<br>suggests a password manager"]
-    P -->|"no"| I["Into the buffer<br>other AIs can find it right away, but it is not a note yet"]
-    I --> C["Organizing: classify<br>one suggested change per record, plus a line in that day's log, in the order things were said"]
-    C --> Q{"Needs your yes?"}
-    Q -->|"log entries you allowed to go in directly"| W["Written"]
-    Q -->|"everything else"| ASK["Shown to you; you say yes"] --> W
-    W --> X["Checked and backed up before writing; a receipt afterwards; index rebuilt"]
-    X -.->|"a wrong change"| UN["undo restores the backup"]
-```
-
+- Each record is your own words, with its source, the time it was said, a category, an importance and a privacy level. Anything that looks like a password, key or ID number is refused (exit code 3) with a suggestion to use a password manager; everything else goes into the buffer, where other AIs can find it right away, though it is not a note yet.
 - There are six kinds of source: your exact words, a view you clearly stated, something taken from your own writing (with the file name), the AI's inference, the AI's guess, and outside material (with its source). Only the first three count as what you meant.
 - Every record carries the time it was said, to the minute, and the newest statement about the same thing counts. When the AI records a new statement with `--replaces "<a few words of the old one>"`, organizing produces a replace-this-line suggestion and keeps the old wording in brackets at the end of the new line. If the old statement is still in the buffer, only the new one goes into the note and the old one stays in the log. An older line that merely looks alike, without `--replaces`, is only pointed out in the suggestion, never replaced automatically.
+- Organizing turns each record into one suggested change and also adds it to that day's log, in the order things were said. Changes you allowed to go in directly, such as log entries, are written; everything else is shown to you and written only after your yes.
 - Writes are checked first. Replacing a whole note requires that the note hasn't changed since the suggestion was made; replacing a line requires that the line is still there. If not, nothing is written and the suggestion is marked out of date (exit code 5). A change that needs your yes is not written without your words (exit code 4).
-- Receipts record which note changed, its hashes before and after, and who approved, never the content.
+- Every write is backed up first, leaves a receipt and rebuilds the index, and `undo` restores the backup after a wrong change. Receipts record which note changed, its hashes before and after, and who approved, never the content.
 - Only one `brainlib` command runs at a time; the others wait. A lock left behind by a crashed process is recognized and cleared by the next command.
 
-### How the AI finds what it needs
+### Reading
 
-```mermaid
-flowchart LR
-    T["New conversation or task"] --> NX["next<br>what to do now, plus the daily rules"]
-    NX --> IX["index<br>a guide of fixed length"]
-    IX --> F["find with keywords"]
-    F --> RD["read one note"]
-```
+At the start of a conversation or task the AI runs `next` for what to do now and the daily rules, looks at `index`, a guide of fixed length, then uses `find` with keywords and `read` for one note.
 
 - Pages come in four tiers: L0 core pages such as About me, read every time; L1 entry pages; L2 regular notes; L3 the archive. Records use the same tiers: important records not yet filed are L0 and other unfiled ones L1; a filed record takes the tier of its page, so a line in About me is L0 and one in a regular note L2; archived ones and log entries older than 14 days are L3.
 - `index` has a fixed length: core pages, important records not yet filed (at most 10), entry pages, the last 7 days of log, recent records (at most 20, newest said first), and statements that may be out of date (at most 5). Older ones are found with filters such as `index --since`, `--category` or `--importance`.
@@ -181,42 +161,19 @@ flowchart LR
 
 Before every task the AI runs `brainlib next`. It goes through the checks below in order, names only the first thing that needs doing, and adds the daily rules.
 
-```mermaid
-flowchart TD
-    S["brainlib next"] --> NEW{"Was the program just replaced by a newer version?"}
-    NEW -->|"yes"| TELL["The new version takes over and tells you what changed"]
-    NEW -->|"no"| UP{"New release out?"}
-    UP -->|"yes"| U["update first"]
-    UP -->|"no"| AC{"Has the AI done the 4-task self-check?"}
-    AC -->|"no"| ACK["agent-check"]
-    AC -->|"yes"| LG{"Language chosen?"}
-    LG -->|"no"| L["lang zh or en"]
-    LG -->|"yes"| LB{"Is there a library?"}
-    LB -->|"no"| IN["doctor, then init or adopt"]
-    LB -->|"yes"| SET{"Setup done?<br>permissions, ten questions, tools connected"}
-    SET -->|"no"| ONE["the next setup step"]
-    SET -->|"yes"| DAY["Daily: keys in notes, the vault, changes allowed to go in directly,<br>suggestions due for review, the buffer to organize, answers due for a check, health check"]
-```
-
-When a new release is out, updating is the step. If the same release comes up again, it is only a line above the step, so an update that keeps failing never holds up everything else.
+1. If the program was just replaced by a newer version, the new version takes over and tells you what changed.
+2. If a new release is out, `update` first. If the same release comes up again, it is only a line above the step, so an update that keeps failing never holds up everything else.
+3. If the AI hasn't done the 4-task self-check, `agent-check`.
+4. If no language is chosen, `lang zh` or `lang en`.
+5. If there is no library, `doctor`, then `init` or `adopt`.
+6. If setup isn't finished (permissions, ten questions, tools connected), the next setup step.
+7. Only then the daily items, which include keys in notes, the vault, changes allowed to go in directly, suggestions due for review, the buffer to organize, answers due for a check, and the health check.
 
 The output always has the same shape: `NEXT` is what to do, `WHY` is the reason, `RUN` lines are commands to run, `SAY TO USER` is what to tell you, and `THEN` says to run `next` again afterwards. Small models can follow it line by line.
 
 ### Updates
 
-```mermaid
-flowchart TD
-    A["next, at most one check a day"] --> B{"Latest release on GitHub newer than this one?"}
-    B -->|"no"| Z["carry on"]
-    B -->|"yes"| C["The AI runs update without asking first"]
-    C --> D{"How was brainlib installed?"}
-    D -->|"git clone"| E["Fetch the release tag from the official repository, fast-forward only<br>stops if the program folder has local changes"]
-    D -->|"unpacked folder"| F["Download the release zip, check its version and paths<br>back up the old program, then copy over it"]
-    D -->|"pip"| G["Print the pip command"]
-    E --> H["The new version takes over: rebuilds the index,<br>refreshes brainlib's lines in tool instructions,<br>replaces a library AGENTS.md nobody edited, backing each up first"]
-    F --> H
-    H --> I["The AI tells you what changed"]
-```
+At most once a day, `next` checks the latest release on GitHub; if it is newer, the AI runs `update` without asking first. A git clone fast-forwards to the release tag from the official repository and stops if the program folder has local changes. An unpacked folder downloads the release zip, checks its version and paths, backs up the old program and copies over it. A pip install gets the pip command to run. The new version then rebuilds the index, refreshes `brainlib`'s lines in tool instructions and replaces a library `AGENTS.md` nobody edited, backing each up first, and the AI tells you what changed.
 
 To stop automatic updates, run `brainlib update --off` or set the environment variable `BRAINLIB_NO_UPDATE_CHECK=1`; either one only stops the check with GitHub. Updating by hand works too: after a `git pull` or a replaced folder, the new version takes over the next time `next` runs. After going back to an older version from a backup, it won't update itself to the version you left, but newer releases still install. With two copies of `brainlib` on one computer, each changes only the lines that run it or run a copy that has been deleted; after you delete one, the other takes over its lines the next time it runs. If the folder around that copy went too, it can't tell a deleted copy from a drive that isn't plugged in, so it leaves those lines alone.
 
@@ -230,6 +187,7 @@ Details of the note format and source labels are in `spec/`; security considerat
 
 ```text
 AGENTS.md          Entry point for AI assistants (Chinese; English in AGENTS.en.md)
+llms.txt           A short project summary for LLMs and agents
 brainlib.py        Launcher for macOS/Linux; on Windows use brainlib.cmd
 brainlib/          The program (Python standard library only)
 skills/            Task guides: setup, onboarding, capture, organize, privacy, maintenance, and a writing guide (Chinese only)
@@ -242,10 +200,6 @@ tests/             Tests
 
 ## License
 
-`brainlib` is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). Individuals can use, modify and share it free of charge for personal use, research, study and hobby projects, and so can charities, schools, public research organizations and government institutions.
-
-**Additional permission.** The developer also permits individuals to use `brainlib` free of charge in their own work, for example to manage their own notes on a work computer. Deploying it for others, building it into a product or using it to provide a service still requires a commercial license.
-
-Any other commercial use is not allowed, and the licensor keeps all commercial rights. For a commercial license, contact the developer through GitHub (github.com/mingweima/brainlib). This is a summary; the LICENSE text and the additional permission above govern.
+`brainlib` is open source under the [Apache License 2.0](LICENSE) from v0.2.3 on. Individuals and companies can use, modify and distribute it free of charge, commercial use included, with no separate license needed. Copies you distribute must include LICENSE and [NOTICE](NOTICE), which names the developer. Version 0.2.2 and earlier stay under the PolyForm Noncommercial License 1.0.0 they were released with.
 
 Developer Mingwei Ma, Capibara Capital.

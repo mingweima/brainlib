@@ -6,8 +6,10 @@
 .brainlib-allow Capibara Capital
 .brainlib-allow github.com/mingweima/brainlib
 .brainlib-allow 赛博永生
-LICENSE Mingwei Ma
-LICENSE github.com/mingweima/brainlib
+NOTICE Mingwei Ma
+NOTICE Mingwei
+NOTICE Capibara Capital
+NOTICE github.com/mingweima/brainlib
 README.md Mingwei Ma
 README.md Mingwei
 README.md Capibara Capital
