@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "brainlib"
+name = "brainlib-harness"
 version = "0.2.2"
 description = "A personal knowledge library that any AI agent can use safely: plain Markdown, approvals, provenance and an encrypted vault."
 readme = "README.en.md"
